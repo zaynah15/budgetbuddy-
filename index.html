@@ -1222,7 +1222,14 @@ function Ring({ spent, budget, color, dark, emoji, label }) {
           fontSize:9,
           fontFamily:"'Nunito',sans-serif",
           color: isOver ? "#ff6b6b" : "var(--text-tertiary)",
-        }}>₹{Math.max(0, budget - spent)} left</div>
+        }}>{spent > budget ? (
+  <span style={{color:"#ff0000", fontWeight:900}}>
+    +₹{spent - budget} overspent 😡
+  </span>
+) : (
+  <>₹{budget - spent} left</>
+)}
+</div>
       </div>
     </div>
   );
