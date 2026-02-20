@@ -2,7 +2,7 @@
   "name": "Spendora - Your Wallet’s Glow-Up 💅",
 "short_name": "Spendora",
 "description": "Personal budget tracker with calender sync, SMS parsing, and daily reminders 🌸",
-"start_url": "/budgetbuddy/",
+"start_url": "/Spendora/",
 
 
   "display": "standalone",
