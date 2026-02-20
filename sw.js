@@ -105,6 +105,7 @@ self.addEventListener('push', event => {
   };
   
   event.waitUntil(
-    self.registration.showNotification('BudgetBuddy 🌸', options)
+  self.registration.showNotification('Spendora', options)
+
   );
 });
