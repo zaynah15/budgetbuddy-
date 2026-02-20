@@ -227,7 +227,13 @@ const NUDGES = [
 const DEF_BUDGETS = { food:2000, clothing:1500, travel:1000, education:1500, hobbies:800 };
 const NOTIF_SK = "budgetbuddy_notifs";
 const THEME_SK = "budgetbuddy_theme";
-const NOTIF_TIMES = [{ hour: 14, minute: 0 }, { hour: 21, minute: 0 }];
+const NOTIF_TIMES = [
+  { hour: 12, minute: 0 },  // 12 PM
+  { hour: 16, minute: 0 },  // 4 PM
+  { hour: 21, minute: 0 },  // 9 PM
+  { hour: 23, minute: 0 },  // 11 PM
+];
+
 
 function loadNotifSettings() {
   try { 
