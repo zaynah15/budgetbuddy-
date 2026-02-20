@@ -1,5 +1,6 @@
 // BudgetBuddy Service Worker
-const CACHE_NAME = 'budgetbuddy-v1';
+const CACHE_NAME = 'spendora-v2';
+
 const urlsToCache = [
   '/',
   '/index.html',
