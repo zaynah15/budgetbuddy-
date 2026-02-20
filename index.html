@@ -2413,6 +2413,37 @@ function BudgetBuddy() {
             }}
           >🔄 New Month</button>
         </div>
+       
+{/* 🔔 Notification Toggle */}
+<div style={{padding:"0 18px"}}>
+  <button
+    onClick={() => {
+      if (notifSettings.enabled) {
+        setNotifSettings({ enabled:false, permission:notifSettings.permission });
+        showToast("🔕 Reminders turned off", "info");
+      } else {
+        enableNotifications();
+      }
+    }}
+    style={{
+      width:"100%",
+      marginTop:10,
+      border:"2px solid #FFB6C1",
+      background: notifSettings.enabled 
+        ? "linear-gradient(135deg,#6fd4a8,#40c8a0)"
+        : "var(--bg-secondary)",
+      borderRadius:14,
+      padding:"12px",
+      fontFamily:"'Nunito',sans-serif",
+      fontWeight:800,
+      fontSize:12,
+      color: notifSettings.enabled ? "white" : "var(--text-primary)",
+      cursor:"pointer",
+    }}
+  >
+    {notifSettings.enabled ? "🔔 Reminders ON" : "🔕 Reminders OFF"}
+  </button>
+</div>
 
         
       </div>
