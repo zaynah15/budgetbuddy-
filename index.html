@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#FFB6C1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Spendora">
+<title>Spendora - Your Wallet's Glow-Up</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- React -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #FFF8F2;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #fdf9ff;
+  --bg-gradient-start: #ffe2ee;
+  --bg-gradient-end: #f0e4ff;
+  --text-primary: #7c5a8a;
+  --text-secondary: #b09cc0;
+  --text-tertiary: #c8aed8;
+  --border-color: #f0e2ff;
+  --shadow: rgba(180,140,200,0.12);
+  --shadow-heavy: rgba(180,140,200,0.25);
+  --ring-track: #f0e4fa;
+  --star-pink: #FFB6C1;
+  --star-black: #2d1a35;
+}
+
+body.dark-mode {
+  --bg-primary: #1a0a20;
+  --bg-secondary: #2d1a35;
+  --bg-card: #2d1a35;
+  --bg-input: #3a2445;
+  --bg-gradient-start: #2d1535;
+  --bg-gradient-end: #1a0a20;
+  --text-primary: #e8d0f0;
+  --text-secondary: #c8a8d8;
+  --text-tertiary: #a888c0;
+  --border-color: #4a3455;
+  --shadow: rgba(0,0,0,0.3);
+  --shadow-heavy: rgba(0,0,0,0.5);
+  --ring-track: #3a2a45;
+}
+
+body {
+  background: var(--bg-primary);
+  font-family: 'Nunito', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.3s ease;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input, textarea, select { -webkit-user-select: text; user-select: text; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 99px; }
+
+@keyframes pulse { 0%,100%{opacity:0.6;transform:scale(1);}50%{opacity:1;transform:scale(1.08);} }
+@keyframes wobble { from{transform:rotate(-8deg) scale(1.1);}to{transform:rotate(8deg) scale(1.1);} }
+@keyframes glutton { from{transform:rotate(-14deg) scale(0.88);}to{transform:rotate(14deg) scale(1.12);} }
+@keyframes slideDown { from{opacity:0;transform:translateX(-50%) translateY(-24px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
+@keyframes slideUp { from{opacity:0;transform:translateX(-50%) translateY(24px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
+@keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+@keyframes sheetUp { from{opacity:0;transform:translateY(100%);}to{opacity:1;transform:translateY(0);} }
+@keyframes popIn { from{opacity:0;transform:scale(0.7);}to{opacity:1;transform:scale(1);} }
+@keyframes fall { to{transform:translateY(110vh) rotate(720deg);} }
+@keyframes spin { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
+@keyframes slideRow { from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);} }
+@keyframes blobA { from{transform:translateY(0) scale(1);}to{transform:translateY(-28px) scale(1.04);} }
+@keyframes blobB { from{transform:translateY(0) scale(1);}to{transform:translateY(24px) scale(0.97);} }
+@keyframes bounce { 0%,100%{transform:scale(1) translateY(0);}50%{transform:scale(1.1) translateY(-5px);} }
+@keyframes float { from{transform:translateY(0px);}to{transform:translateY(-15px);} }
+@keyframes shake { 0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);} }
+@keyframes starGlow { 0%,100%{transform:scale(1) rotate(0deg);filter:drop-shadow(0 0 6px #FFB6C1);}50%{transform:scale(1.2) rotate(180deg);filter:drop-shadow(0 0 18px #FFB6C1);} }
+@keyframes starPulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.15);} }
+@keyframes ringFill { from{stroke-dashoffset:201;}to{stroke-dashoffset:var(--target-offset);} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+/* ══════════════════════════════════════════════════════
+   FIREBASE CONFIG
+══════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAyIwTNZB0mYWYPViDiHhYQsrc-DTyWmrk",
+  authDomain: "budgetbuddy-4168c.firebaseapp.com",
+  projectId: "budgetbuddy-4168c",
+  storageBucket: "budgetbuddy-4168c.firebasestorage.app",
+  messagingSenderId: "943210794388",
+  appId: "1:943210794388:web:88940dc98f36240ec7d381",
+};
+
+let auth, db, isFirebaseConfigured = false;
+try {
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  // Enable offline persistence
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+  isFirebaseConfigured = true;
+} catch (error) {
+  console.error("Firebase init error:", error);
+}
+
+/* ══════════════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════════════ */
+const CATS = {
+  food:      { label:"Food",      emoji:"🍜", color:"#FFB6C1", dark:"#d4507a", lightBg:"#fff0f4", darkBg:"#3d2535" },
+  clothing:  { label:"Clothing",  emoji:"👗", color:"#B5D8FF", dark:"#3a85d4", lightBg:"#f0f6ff", darkBg:"#252d45" },
+  travel:    { label:"Travel",    emoji:"✈️",  color:"#C1F0DC", dark:"#2aaa78", lightBg:"#f0fcf7", darkBg:"#253d35" },
+  education: { label:"Education", emoji:"📚", color:"#E6E6FA", dark:"#6060c0", lightBg:"#f5f5ff", darkBg:"#2d2d45" },
+  hobbies:   { label:"Hobbies",   emoji:"🎮", color:"#FFD6BA", dark:"#d4703a", lightBg:"#fff7f0", darkBg:"#3d3025" },
+};
+
+const NUDGES = [
+  "🌿 Eat intentionally.",
+  "😋 Hungry or just bored?",
+  "💭 Need or craving?",
+  "🍎 Your wallet says: cook at home!",
+  "🧘 Pause before you pay.",
+  "💡 Tomorrow-you will be grateful.",
+];
+
+const DEF_BUDGETS = { food:2000, clothing:1500, travel:1000, education:1500, hobbies:800 };
+
+const THEME_SK = "spendora_theme";
+const NOTIF_SK = "spendora_notifs";
+const SPENT_TODAY_SK = "spendora_spent_today";
+const TIMEZONE_SK = "spendora_timezone";
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
+function getMonthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getMonthName(date = new Date()) {
+  return date.toLocaleString("default", { month:"long", year:"numeric" });
+}
+
+function getInitState() {
+  const spent = {}, budgets = {};
+  Object.keys(CATS).forEach(k => { spent[k] = 0; budgets[k] = DEF_BUDGETS[k]; });
+  return {
+    budgets, spent,
+    transactions: [],
+    monthKey: getMonthKey(),
+    monthName: getMonthName(),
+    salary: 0,
+    yearlyLog: {},
+    currentStar: null,
+  };
+}
+
+function calculateStar(spent, budgets) {
+  const totalSpent = Object.values(spent).reduce((a,b)=>a+b,0);
+  const totalBudget = Object.values(budgets).reduce((a,b)=>a+b,0);
+  return totalSpent <= totalBudget ? "pink" : "black";
+}
+
+function parseSMS(text) {
+  if (!text) return null;
+  const patterns = [
+    /Rs\.?\s*(\d+(?:,\d+)*(?:\.\d{1,2})?)/i,
+    /INR\.?\s*(\d+(?:,\d+)*(?:\.\d{1,2})?)/i,
+    /₹\.?\s*(\d+(?:,\d+)*(?:\.\d{1,2})?)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const amount = parseFloat(match[1].replace(/,/g,''));
+      if (amount > 0) return Math.round(amount);
+    }
+  }
+  return null;
+}
+
+const ls = {
+  get: (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
+/* ══════════════════════════════════════════════════════
+   NOTIFICATIONS
+══════════════════════════════════════════════════════ */
+const NOTIF_TIMES = [
+  { hour:12, minute:0 },
+  { hour:16, minute:0 },
+  { hour:21, minute:0 },
+  { hour:23, minute:0 },
+];
+
+let notifTimers = [];
+
+function clearNotifTimers() {
+  notifTimers.forEach(t => clearTimeout(t));
+  notifTimers = [];
+}
+
+function scheduleNextNotification(userName) {
+  clearNotifTimers();
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  
+  const now = new Date();
+  NOTIF_TIMES.forEach(({ hour, minute }) => {
+    const target = new Date();
+    target.setHours(hour, minute, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const delay = target - now;
+    const tid = setTimeout(() => {
+      // Fire notification — user should log spending
+      const n = new Notification(`Hey ${userName} 🌸`, {
+        body: "Did you spend anything today?",
+        icon: "logo.png",
+        badge: "logo.png",
+        tag: "spending-reminder",
+        requireInteraction: false,
+        vibrate: [200, 100, 200],
+      });
+      n.onclick = () => {
+        window.focus();
+        window.dispatchEvent(new CustomEvent('open-quick-log'));
+        n.close();
+      };
+      scheduleNextNotification(userName);
+    }, delay);
+    notifTimers.push(tid);
+  });
+}
+
+function markSpentToday() {
+  ls.set(SPENT_TODAY_SK, new Date().toDateString());
+}
+
+/* ══════════════════════════════════════════════════════
+   FIRESTORE SYNC HELPER
+══════════════════════════════════════════════════════ */
+async function saveToFirestore(uid, data) {
+  if (!isFirebaseConfigured || !uid) return;
+  // Clean undefined values for Firestore
+  const clean = JSON.parse(JSON.stringify(data));
+  await db.collection('users').doc(uid).set(clean);
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPONENTS — BLOBS
+══════════════════════════════════════════════════════ */
+function Blobs() {
+  return (
+    <div style={{position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0}}>
+      {[
+        {s:320, top:-90, left:-90, c:"#FFB6C118", a:"blobA", d:18},
+        {s:260, top:"58%", right:-70, c:"#B5D8FF20", a:"blobB", d:22},
+        {s:200, bottom:-60, left:"20%", c:"#C1F0DC1a", a:"blobA", d:16},
+        {s:180, top:"30%", left:"62%", c:"#E6E6FA22", a:"blobB", d:20},
+      ].map((b, i) => (
+        <div key={i} style={{
+          position:"absolute", width:b.s, height:b.s, borderRadius:"50%",
+          background:b.c, top:b.top, left:b.left, right:b.right, bottom:b.bottom,
+          animation:`${b.a} ${b.d}s ease-in-out infinite alternate`,
+          animationDelay:`${i*2.8}s`, filter:"blur(50px)",
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+function Toast({message, type, visible}) {
+  if (!visible) return null;
+  const bg = type==="error" ? "linear-gradient(135deg,#ff6b6b,#ff8e6b)"
+    : type==="warn" ? "linear-gradient(135deg,#ffb347,#ffd060)"
+    : type==="success" ? "linear-gradient(135deg,#6fd4a8,#40c8a0)"
+    : "linear-gradient(135deg,#b5d8ff,#80b8ff)";
+  return (
+    <div style={{
+      position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
+      background:bg, color:"white", padding:"12px 24px", borderRadius:999,
+      fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:14,
+      boxShadow:"0 8px 28px rgba(0,0,0,0.18)", zIndex:9998,
+      animation:"slideDown 0.35s cubic-bezier(.34,1.56,.64,1)",
+      whiteSpace:"nowrap", maxWidth:"90vw", overflow:"hidden",
+      textOverflow:"ellipsis",
+    }}>{message}</div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   CONFETTI
+══════════════════════════════════════════════════════ */
+function Confetti({active}) {
+  if (!active) return null;
+  const colors = ["#FFB6C1","#B5D8FF","#C1F0DC","#E6E6FA","#FFD6BA","#ffd700","#ff9de2","#a0f0c0"];
+  return (
+    <div style={{position:"fixed", inset:0, pointerEvents:"none", zIndex:9999, overflow:"hidden"}}>
+      {Array.from({length:50}, (_,i) => (
+        <div key={i} style={{
+          position:"absolute", top:-16, left:`${Math.random()*100}%`,
+          width:7+Math.random()*7, height:7+Math.random()*7,
+          borderRadius:Math.random()>0.5?"50%":"3px",
+          background:colors[i%colors.length],
+          animation:`fall ${1.4+Math.random()*2}s ${Math.random()*0.8}s ease-in forwards`,
+          transform:`rotate(${Math.random()*360}deg)`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   RING
+══════════════════════════════════════════════════════ */
+function Ring({ spent, budget, color, dark, emoji, label, onClick }) {
+  const pct = Math.min((spent / budget) * 100, 100);
+  const r = 32, circ = 2 * Math.PI * r;
+  const dash = circ - (pct / 100) * circ;
+  const isOver = spent > budget;
+  const isWarn = (budget - spent) <= 300 && !isOver;
+  const stroke = isOver ? "#ff6b6b" : isWarn ? "#ffb347" : color;
+  const overspentAmt = isOver ? spent - budget : 0;
+
+  return (
+    <div onClick={onClick} style={{
+      display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+      cursor:onClick?"pointer":"default", WebkitTapHighlightColor:"transparent",
+    }}>
+      <div style={{position:"relative", width:76, height:76}}>
+        {isOver && (
+          <div style={{
+            position:"absolute", inset:-4, borderRadius:"50%",
+            background:"rgba(255,107,107,0.15)",
+            animation:"pulse 1.2s ease-in-out infinite",
+          }}/>
+        )}
+        <svg width={76} height={76} viewBox="0 0 76 76">
+          <circle cx={38} cy={38} r={r} fill="none" stroke="var(--ring-track)" strokeWidth={7}/>
+          <circle cx={38} cy={38} r={r} fill="none" stroke={stroke} strokeWidth={7}
+            strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash}
+            style={{
+              transformOrigin:"50% 50%", transform:"rotate(-90deg)",
+              transition:"stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1), stroke 0.4s",
+            }}
+          />
+        </svg>
+        <div style={{
+          position:"absolute", inset:0, display:"flex", alignItems:"center",
+          justifyContent:"center", fontSize:isOver?20:18,
+          animation:isOver?"wobble 0.7s ease-in-out infinite alternate":"none",
+        }}>
+          {isOver ? "😡" : emoji}
+        </div>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontWeight:800, fontSize:10, color:"var(--text-secondary)", fontFamily:"'Nunito',sans-serif"}}>{label}</div>
+        <div style={{fontWeight:700, fontSize:9, fontFamily:"'Nunito',sans-serif", color:isOver?"#ff6b6b":"var(--text-tertiary)"}}>
+          {isOver ? `+₹${overspentAmt}` : `₹${Math.max(0,budget-spent)} left`}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MONTHLY STAR BADGE
+══════════════════════════════════════════════════════ */
+function MonthlyStarBadge({ monthName, currentStar, totalSpent, salary }) {
+  const isPink = currentStar === "pink";
+  const hasTxns = totalSpent > 0;
+  
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:8,
+      background: isPink
+        ? "linear-gradient(135deg,#FFB6C1,#ff9db0)"
+        : hasTxns
+          ? "linear-gradient(135deg,#4a3455,#2d1a35)"
+          : "linear-gradient(135deg,#e8e0f0,#d8d0e8)",
+      borderRadius:999, padding:"8px 14px",
+      boxShadow:"0 4px 16px rgba(255,182,193,0.3)",
+    }}>
+      <div style={{
+        fontSize:22,
+        animation: isPink ? "starGlow 2.5s ease-in-out infinite" : "none",
+        filter: isPink ? "none" : hasTxns ? "grayscale(1) brightness(0.4)" : "grayscale(1) brightness(0.6)",
+      }}>⭐</div>
+      <div>
+        <div style={{fontWeight:800, fontSize:10, color:isPink?"white":hasTxns?"#c8a8d8":"#9080a8", fontFamily:"'Nunito',sans-serif"}}>
+          {monthName.split(' ')[0]}
+        </div>
+        <div style={{fontWeight:700, fontSize:9, color:isPink?"white":hasTxns?"#a888c0":"#b0a0c0", fontFamily:"'Nunito',sans-serif"}}>
+          {isPink ? "Pink Star ✨" : hasTxns ? "Black Star" : "In Progress"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   CATEGORY SHEET (bottom drawer)
+══════════════════════════════════════════════════════ */
+function CategorySheet({ amount, spent, budgets, onPick, onCancel, isDark }) {
+  const [pressed, setPressed] = useState(null);
+
+  return (
+    <div style={{
+      position:"fixed", inset:0,
+      background:isDark?"rgba(0,0,0,0.75)":"rgba(70,30,110,0.42)",
+      backdropFilter:"blur(10px)", display:"flex", alignItems:"flex-end",
+      justifyContent:"center", zIndex:9990, animation:"fadeIn 0.18s ease",
+    }}>
+      <div style={{
+        background:"var(--bg-primary)", borderRadius:"28px 28px 0 0",
+        padding:"0 0 40px", width:"100%", maxWidth:500,
+        boxShadow:`0 -20px 70px var(--shadow-heavy)`,
+        animation:"sheetUp 0.35s cubic-bezier(.25,.8,.25,1)",
+      }}>
+        <div style={{padding:"14px 0 0", display:"flex", justifyContent:"center"}}>
+          <div style={{width:40, height:4, borderRadius:99, background:"var(--border-color)"}}/>
+        </div>
+        <div style={{textAlign:"center", padding:"16px 20px 18px"}}>
+          <div style={{
+            display:"inline-flex", alignItems:"center", gap:6,
+            background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+            borderRadius:999, padding:"10px 32px",
+            boxShadow:"0 6px 20px rgba(255,182,193,0.5)",
+          }}>
+            <span style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:30, color:"white"}}>₹{amount}</span>
+          </div>
+          <div style={{marginTop:12, fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16, color:"var(--text-primary)"}}>
+            What was this for? 🤔
+          </div>
+          <div style={{fontFamily:"'Nunito',sans-serif", fontSize:12, color:"var(--text-secondary)", fontWeight:700, marginTop:3}}>
+            Tap a bucket below
+          </div>
+        </div>
+        <div style={{padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14}}>
+          {Object.entries(CATS).map(([key, cat]) => {
+            const remaining = budgets[key] - spent[key];
+            const afterSpend = remaining - amount;
+            const isOver = afterSpend < 0;
+            const isClose = !isOver && afterSpend <= 300;
+            const isP = pressed === key;
+            return (
+              <button key={key}
+                onMouseDown={() => setPressed(key)}
+                onMouseUp={() => { setPressed(null); onPick(key); }}
+                onTouchStart={e => { e.preventDefault(); setPressed(key); }}
+                onTouchEnd={e => { e.preventDefault(); setPressed(null); onPick(key); }}
+                onMouseLeave={() => setPressed(null)}
+                style={{
+                  border:`2.5px solid ${isOver?"#ff6b6b":isP?cat.dark:cat.color}`,
+                  background:isOver?(isDark?"#3a2530":"#fff5f5"):isP?`${cat.color}70`:(isDark?cat.darkBg:cat.lightBg),
+                  borderRadius:20, padding:"15px 12px", display:"flex",
+                  alignItems:"center", gap:11, cursor:"pointer",
+                  transform:isP?"scale(0.95)":"scale(1)",
+                  transition:"all 0.15s ease",
+                  boxShadow:isP?`0 2px 8px ${cat.color}60`:isOver?"0 2px 12px rgba(255,100,100,0.2)":`0 4px 16px ${cat.color}30`,
+                  outline:"none", textAlign:"left", width:"100%",
+                  WebkitTapHighlightColor:"transparent",
+                }}
+              >
+                <span style={{fontSize:32, flexShrink:0, lineHeight:1, animation:isP?"bounce 0.4s ease":"none"}}>
+                  {isOver ? "😡" : cat.emoji}
+                </span>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:14, color:isP?cat.dark:"var(--text-primary)", marginBottom:3}}>{cat.label}</div>
+                  <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:11, color:isOver?"#ff6b6b":isClose?"#e8900a":"var(--text-secondary)"}}>
+                    {isOver ? `+₹${Math.abs(afterSpend)} overspent 😡` : isClose ? `⚡ ₹${afterSpend} left` : `₹${afterSpend} left`}
+                  </div>
+                  <div style={{marginTop:5, height:4, borderRadius:99, background:"rgba(0,0,0,0.06)", overflow:"hidden"}}>
+                    <div style={{
+                      height:"100%", borderRadius:99,
+                      background:isOver?"#ff6b6b":isClose?"#ffb347":`linear-gradient(90deg,${cat.color},${cat.dark})`,
+                      width:`${Math.min(((spent[key]+Number(amount))/budgets[key])*100,100)}%`,
+                    }}/>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{padding:"0 16px"}}>
+          <button onClick={onCancel} style={{
+            width:"100%", border:`2px solid var(--border-color)`,
+            background:"var(--bg-secondary)", borderRadius:16, padding:"13px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:14,
+            color:"var(--text-tertiary)", cursor:"pointer",
+            WebkitTapHighlightColor:"transparent",
+          }}>Cancel ✕</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   GLUTTON MODAL (overspend alert)
+══════════════════════════════════════════════════════ */
+function GluttonModal({ category, overspentAmount, projectedSavingsLost, onClose, isDark }) {
+  if (!category) return null;
+  const cat = CATS[category];
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed", inset:0,
+      background:isDark?"rgba(0,0,0,0.75)":"rgba(100,50,140,0.45)",
+      backdropFilter:"blur(8px)", display:"flex", alignItems:"center",
+      justifyContent:"center", zIndex:9997, animation:"fadeIn 0.2s ease",
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"var(--bg-card)", borderRadius:32, padding:"36px 28px",
+        textAlign:"center", maxWidth:340, width:"90%",
+        boxShadow:`0 32px 80px var(--shadow-heavy)`,
+        animation:"popIn 0.4s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        <div style={{fontSize:72, animation:"glutton 0.7s ease-in-out infinite alternate", lineHeight:1.1}}>😡</div>
+        <div style={{fontFamily:"'Nunito',sans-serif", fontSize:22, fontWeight:900, color:"#ff6b6b", marginTop:12}}>
+          Budget Busted!
+        </div>
+        <div style={{
+          background:"#fff0f0", border:"2px solid #ff6b6b",
+          borderRadius:16, padding:"12px 16px", marginTop:12,
+          fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:"#ff6b6b",
+        }}>
+          +₹{overspentAmount} overspent 😡
+        </div>
+        <div style={{fontFamily:"'Nunito',sans-serif", fontSize:14, color:"var(--text-secondary)", marginTop:14, lineHeight:1.7}}>
+          You crossed your <strong style={{color:cat.dark}}>{cat.label}</strong> budget.<br/>
+          {projectedSavingsLost > 0 && (
+            <strong style={{color:"#ff6b6b"}}>
+              This way you won't be able to save ₹{projectedSavingsLost} by the end of this month.
+            </strong>
+          )}
+          <br/>Come on, you're better than this!!
+        </div>
+        <button onClick={onClose} style={{
+          marginTop:20, background:"linear-gradient(135deg,#ff6b6b,#ff8e53)",
+          color:"white", border:"none", borderRadius:999, padding:"12px 28px",
+          fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:15,
+          cursor:"pointer", boxShadow:"0 4px 16px rgba(255,107,107,0.5)",
+        }}>I'll do better 💪</button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   NUDGE (food bubble)
+══════════════════════════════════════════════════════ */
+function Nudge({ visible, message, onClose }) {
+  if (!visible) return null;
+  return (
+    <div style={{
+      position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)",
+      background:"linear-gradient(135deg,#fff8f2,#ffe8f5)",
+      border:"2px solid #FFB6C1", borderRadius:20, padding:"13px 20px",
+      fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700,
+      color:"#c06080", boxShadow:"0 8px 30px rgba(255,182,193,0.3)",
+      zIndex:9996, animation:"slideUp 0.4s cubic-bezier(.34,1.56,.64,1)",
+      display:"flex", alignItems:"center", gap:10, maxWidth:"88vw",
+    }}>
+      <span style={{fontSize:20}}>🌿</span>
+      {message}
+      <span onClick={onClose} style={{marginLeft:8, cursor:"pointer", fontSize:16, color:"#e8a0b0", fontWeight:900}}>✕</span>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   QUICK LOG MODAL
+══════════════════════════════════════════════════════ */
+function QuickLogModal({ onLog, onSkip, isDark }) {
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState(null);
+  const inputRef = useRef(null);
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100); }, []);
+
+  const handleSubmit = () => {
+    if (!amount || !category) return;
+    onLog(Number(amount), category);
+  };
+
+  return (
+    <div style={{
+      position:"fixed", inset:0,
+      background:isDark?"rgba(0,0,0,0.75)":"rgba(70,30,110,0.45)",
+      backdropFilter:"blur(10px)", display:"flex", alignItems:"center",
+      justifyContent:"center", zIndex:9999, animation:"fadeIn 0.2s ease",
+      padding:"20px",
+    }}>
+      <div style={{
+        background:"var(--bg-card)", borderRadius:28, padding:"28px 24px",
+        width:"100%", maxWidth:380,
+        boxShadow:`0 32px 80px var(--shadow-heavy)`,
+        animation:"popIn 0.4s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        <div style={{textAlign:"center", marginBottom:20}}>
+          <div style={{fontSize:46, marginBottom:8}}>💸</div>
+          <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:18, color:"var(--text-primary)"}}>
+            Log a Spend
+          </div>
+          <div style={{fontFamily:"'Nunito',sans-serif", fontSize:13, color:"var(--text-secondary)", fontWeight:700, marginTop:2}}>
+            Enter amount & pick category
+          </div>
+        </div>
+        <div style={{marginBottom:14}}>
+          <div style={{
+            display:"flex", alignItems:"center",
+            border:`2px solid var(--border-color)`, borderRadius:16,
+            background:"var(--bg-input)", overflow:"hidden",
+          }}>
+            <span style={{padding:"0 12px", fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:20, color:"#c8a0e0"}}>₹</span>
+            <input ref={inputRef} type="number" placeholder="0" value={amount}
+              onChange={e=>setAmount(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&category&&handleSubmit()}
+              style={{
+                flex:1, border:"none", outline:"none",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:26,
+                color:"var(--text-primary)", background:"transparent", padding:"12px 8px",
+              }}
+            />
+          </div>
+        </div>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:16}}>
+          {Object.entries(CATS).map(([key, cat]) => (
+            <button key={key} onClick={()=>setCategory(key)} style={{
+              border:`2px solid ${category===key?cat.dark:cat.color}`,
+              background:category===key?`${cat.color}60`:(isDark?cat.darkBg:cat.lightBg),
+              borderRadius:14, padding:"10px 6px", display:"flex",
+              flexDirection:"column", alignItems:"center", gap:4,
+              cursor:"pointer", transform:category===key?"scale(1.06)":"scale(1)",
+              transition:"all 0.2s ease",
+              boxShadow:category===key?`0 4px 16px ${cat.color}70`:"0 2px 8px rgba(0,0,0,0.05)",
+              WebkitTapHighlightColor:"transparent",
+            }}>
+              <span style={{fontSize:24}}>{cat.emoji}</span>
+              <span style={{fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:10, color:category===key?cat.dark:"var(--text-secondary)"}}>
+                {cat.label}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex", gap:8}}>
+          <button onClick={onSkip} style={{
+            flex:1, border:`2px solid var(--border-color)`,
+            background:"var(--bg-secondary)", borderRadius:14, padding:"12px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:14,
+            color:"var(--text-tertiary)", cursor:"pointer",
+          }}>Skip</button>
+          <button onClick={handleSubmit} disabled={!amount||!category} style={{
+            flex:1, background:(amount&&category)?"linear-gradient(135deg,#FFB6C1,#c8a0e0)":"#e8ddf0",
+            border:"none", borderRadius:14, padding:"12px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:14,
+            color:(amount&&category)?"white":"#c8b8d8",
+            cursor:(amount&&category)?"pointer":"not-allowed",
+            boxShadow:(amount&&category)?"0 4px 16px rgba(255,182,193,0.5)":"none",
+          }}>Log It ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   HISTORY
+══════════════════════════════════════════════════════ */
+function History({ txns, isDark }) {
+  if (!txns.length) {
+    return (
+      <div style={{textAlign:"center", padding:"32px 16px", color:"var(--text-tertiary)", fontFamily:"'Nunito',sans-serif"}}>
+        <img src="logo.png" alt="" style={{width:56, height:56, marginBottom:10, opacity:0.4}}/>
+        <div style={{fontWeight:700, fontSize:14}}>No transactions yet!</div>
+        <div style={{fontSize:12, marginTop:4}}>Log your first spend above.</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{maxHeight:320, overflowY:"auto", paddingRight:2}}>
+      {[...txns].reverse().map((t, i) => {
+        const cat = CATS[t.category];
+        if (!cat) return null;
+        return (
+          <div key={i} style={{
+            display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
+            marginBottom:8, background:"var(--bg-secondary)", borderRadius:16,
+            boxShadow:`0 2px 10px var(--shadow)`,
+            border:`1.5px solid ${cat.color}40`,
+            animation:i===0?"slideRow 0.3s ease":"none",
+          }}>
+            <div style={{
+              width:38, height:38, borderRadius:12, background:`${cat.color}45`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:18, flexShrink:0,
+            }}>{cat.emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:13, color:"var(--text-primary)"}}>{cat.label}</div>
+              {t.note && <div style={{fontFamily:"'Nunito',sans-serif", fontSize:11, color:"var(--text-secondary)", fontStyle:"italic"}}>{t.note}</div>}
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:10, color:"var(--text-tertiary)"}}>{t.time}</div>
+            </div>
+            <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16, color:"#e86090"}}>-₹{t.amount}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   BUCKET HISTORY
+══════════════════════════════════════════════════════ */
+function BucketHistory({ category, transactions, monthName, onClose, isDark }) {
+  const cat = CATS[category];
+  const filtered = transactions.filter(t=>t.category===category);
+  const totalSpent = filtered.reduce((a,t)=>a+t.amount, 0);
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed", inset:0,
+      background:isDark?"rgba(0,0,0,0.75)":"rgba(70,30,110,0.45)",
+      backdropFilter:"blur(10px)", display:"flex", alignItems:"center",
+      justifyContent:"center", zIndex:9995, animation:"fadeIn 0.2s ease", padding:"20px",
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:"var(--bg-card)", borderRadius:28, padding:"28px 24px",
+        width:"100%", maxWidth:420, maxHeight:"80vh",
+        boxShadow:`0 32px 80px var(--shadow-heavy)`,
+        animation:"popIn 0.4s cubic-bezier(.34,1.56,.64,1)",
+        display:"flex", flexDirection:"column",
+      }}>
+        <div style={{marginBottom:16, flexShrink:0}}>
+          <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:4}}>
+            <div style={{
+              width:48, height:48, borderRadius:14, background:`${cat.color}40`,
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:26,
+            }}>{cat.emoji}</div>
+            <div style={{flex:1}}>
+              <h3 style={{fontFamily:"'Nunito',sans-serif", fontSize:19, fontWeight:900, color:"var(--text-primary)"}}>
+                {cat.label} · {monthName.split(' ')[0]}
+              </h3>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700, color:"var(--text-secondary)"}}>
+                {filtered.length} transaction{filtered.length!==1?"s":""} · ₹{totalSpent} total
+              </div>
+            </div>
+            <button onClick={onClose} style={{background:"none", border:"none", fontSize:24, color:"var(--text-tertiary)", cursor:"pointer"}}>✕</button>
+          </div>
+        </div>
+        <div style={{flex:1, overflowY:"auto", paddingRight:4}}>
+          {filtered.length === 0 ? (
+            <div style={{textAlign:"center", padding:"40px 20px", color:"var(--text-tertiary)"}}>
+              <div style={{fontSize:40, marginBottom:12}}>{cat.emoji}</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700}}>No {cat.label.toLowerCase()} transactions yet</div>
+            </div>
+          ) : (
+            [...filtered].reverse().map((t, i) => (
+              <div key={i} style={{
+                padding:"12px", marginBottom:10,
+                background:isDark?cat.darkBg:cat.lightBg,
+                border:`1.5px solid ${cat.color}40`, borderRadius:14,
+                animation:i===0?"slideRow 0.3s ease":"none",
+              }}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:700, color:"var(--text-tertiary)"}}>{t.time}</div>
+                    {t.note && <div style={{fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700, color:"var(--text-secondary)", marginTop:3}}>{t.note}</div>}
+                  </div>
+                  <div style={{fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:"#e86090"}}>-₹{t.amount}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   YEARLY REPORT
+══════════════════════════════════════════════════════ */
+function YearlyReport({ yearlyLog, onMonthClick, onClose, isDark }) {
+  const sortedMonths = Object.keys(yearlyLog).sort().reverse();
+  const pinkCount = sortedMonths.filter(k=>yearlyLog[k].star==="pink").length;
+  const blackCount = sortedMonths.length - pinkCount;
+
+  return (
+    <div style={{position:"fixed", inset:0, background:"var(--bg-primary)", zIndex:9994, overflowY:"auto", animation:"fadeIn 0.2s ease"}}>
+      <div style={{maxWidth:500, margin:"0 auto", padding:"20px 20px 40px"}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, paddingTop:8}}>
+          <h2 style={{
+            fontFamily:"'Nunito',sans-serif", fontSize:24, fontWeight:900,
+            background:"linear-gradient(135deg,#c06080,#9b6dbd)",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+          }}>Yearly Report 📊</h2>
+          <button onClick={onClose} style={{
+            background:"var(--bg-card)", border:"none", borderRadius:"50%",
+            width:42, height:42, fontSize:20, color:"var(--text-primary)",
+            cursor:"pointer", boxShadow:`0 4px 16px var(--shadow)`,
+          }}>✕</button>
+        </div>
+
+        {sortedMonths.length > 0 && (
+          <div style={{
+            background:"var(--bg-card)", borderRadius:20, padding:"20px",
+            marginBottom:20, boxShadow:`0 4px 20px var(--shadow)`,
+            display:"flex", gap:16,
+          }}>
+            <div style={{flex:1, textAlign:"center", padding:"12px", background:isDark?"#3a2445":"#fff0f4", borderRadius:14}}>
+              <div style={{fontSize:28, animation:"starGlow 2.5s ease-in-out infinite"}}>⭐</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:24, color:"#FFB6C1"}}>{pinkCount}</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:11, color:"var(--text-secondary)"}}>Pink Stars</div>
+            </div>
+            <div style={{flex:1, textAlign:"center", padding:"12px", background:isDark?"#3a2445":"#f5f0ff", borderRadius:14}}>
+              <div style={{fontSize:28, filter:"grayscale(1) brightness(0.3)"}}>⭐</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:24, color:"var(--text-primary)"}}>{blackCount}</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:11, color:"var(--text-secondary)"}}>Black Stars</div>
+            </div>
+          </div>
+        )}
+
+        {sortedMonths.length === 0 ? (
+          <div style={{textAlign:"center", padding:"60px 20px", background:"var(--bg-card)", borderRadius:24, boxShadow:`0 8px 32px var(--shadow)`}}>
+            <div style={{fontSize:60, marginBottom:16}}>📅</div>
+            <div style={{fontFamily:"'Nunito',sans-serif", fontSize:16, fontWeight:800, color:"var(--text-primary)", marginBottom:8}}>No completed months yet</div>
+            <div style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700, color:"var(--text-secondary)"}}>Keep tracking to build your yearly log!</div>
+          </div>
+        ) : (
+          sortedMonths.map(monthKey => {
+            const data = yearlyLog[monthKey];
+            return (
+              <div key={monthKey} onClick={()=>onMonthClick(monthKey, data)} style={{
+                background:"var(--bg-card)", borderRadius:20, padding:"20px",
+                marginBottom:14, boxShadow:`0 4px 20px var(--shadow)`,
+                cursor:"pointer", transition:"all 0.2s ease",
+                border:`2px solid ${data.star==="pink"?"#FFB6C1":isDark?"#4a3455":"#e0d8f0"}`,
+              }}>
+                <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Nunito',sans-serif", fontSize:17, fontWeight:900, color:"var(--text-primary)", marginBottom:4}}>
+                      {data.monthName}
+                    </div>
+                    <div style={{fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700, color:"var(--text-secondary)"}}>
+                      Saved: ₹{Math.max(0, data.saved || 0).toLocaleString()} · Spent: ₹{(data.totalSpent||0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize:36,
+                    filter:data.star==="pink"?"none":"grayscale(1) brightness(0.3)",
+                    animation:data.star==="pink"?"starGlow 2.5s ease-in-out infinite":"none",
+                  }}>⭐</div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MONTH DETAIL
+══════════════════════════════════════════════════════ */
+function MonthDetailView({ monthKey, data, onClose, isDark }) {
+  if (!data) return null;
+  return (
+    <div style={{position:"fixed", inset:0, background:"var(--bg-primary)", zIndex:9995, overflowY:"auto", animation:"fadeIn 0.2s ease"}}>
+      <div style={{maxWidth:500, margin:"0 auto", padding:"20px 20px 40px"}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, paddingTop:8}}>
+          <h2 style={{fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900, color:"var(--text-primary)"}}>{data.monthName}</h2>
+          <button onClick={onClose} style={{
+            background:"var(--bg-card)", border:"none", borderRadius:"50%",
+            width:40, height:40, fontSize:20, color:"var(--text-primary)",
+            cursor:"pointer", boxShadow:`0 4px 16px var(--shadow)`,
+          }}>✕</button>
+        </div>
+        <div style={{
+          background:data.star==="pink"?"linear-gradient(135deg,#FFB6C1,#ff9db0)":"linear-gradient(135deg,#4a3455,#2d1a35)",
+          borderRadius:20, padding:"20px", marginBottom:20,
+          boxShadow:`0 8px 32px var(--shadow-heavy)`,
+          display:"flex", alignItems:"center", gap:16, color:"white",
+        }}>
+          <div style={{
+            fontSize:52,
+            filter:data.star==="pink"?"none":"grayscale(1) brightness(0.6)",
+            animation:data.star==="pink"?"starGlow 2.5s ease-in-out infinite":"none",
+          }}>⭐</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Nunito',sans-serif", fontSize:17, fontWeight:900, marginBottom:4}}>
+              {data.star==="pink" ? "Pink Star Earned! 🎉" : "Black Star"}
+            </div>
+            <div style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700, opacity:0.9}}>
+              {data.star==="pink" ? "Stayed within budget!" : "Overspent this month"}
+            </div>
+          </div>
+        </div>
+        <div style={{background:"var(--bg-card)", borderRadius:20, padding:"20px", marginBottom:16, boxShadow:`0 4px 20px var(--shadow)`}}>
+          <h3 style={{fontFamily:"'Nunito',sans-serif", fontSize:15, fontWeight:900, color:"var(--text-primary)", marginBottom:14}}>Summary</h3>
+          {[
+            ["Income", `₹${(data.salary||0).toLocaleString()}`, false],
+            ["Total Budget", `₹${(data.totalBudget||0).toLocaleString()}`, false],
+            ["Total Spent", `₹${(data.totalSpent||0).toLocaleString()}`, true],
+            ["Saved", `₹${Math.max(0,(data.saved||0)).toLocaleString()}`, false, data.saved>=0],
+          ].map(([label, value, isSpent, isGood]) => (
+            <div key={label} style={{
+              display:"flex", justifyContent:"space-between",
+              padding:"11px 14px", borderRadius:12, marginBottom:8,
+              background:isGood!=null?(isGood?"linear-gradient(135deg,#6fd4a8,#40c8a0)":"linear-gradient(135deg,#ff6b6b,#ff8e53)"):(isDark?"#3a2445":"#f9f6ff"),
+            }}>
+              <span style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:800, color:isGood!=null?"white":"var(--text-secondary)"}}>{label}</span>
+              <span style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:900, color:isGood!=null?"white":isSpent?"#e86090":"var(--text-primary)"}}>{value}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{background:"var(--bg-card)", borderRadius:20, padding:"20px", boxShadow:`0 4px 20px var(--shadow)`}}>
+          <h3 style={{fontFamily:"'Nunito',sans-serif", fontSize:15, fontWeight:900, color:"var(--text-primary)", marginBottom:14}}>Category Breakdown</h3>
+          {Object.entries(CATS).map(([key, cat]) => (
+            <div key={key} style={{
+              display:"flex", alignItems:"center", gap:12, padding:"11px",
+              marginBottom:8, background:isDark?cat.darkBg:cat.lightBg,
+              border:`1.5px solid ${cat.color}40`, borderRadius:12,
+            }}>
+              <span style={{fontSize:22}}>{cat.emoji}</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:800, color:"var(--text-primary)"}}>{cat.label}</div>
+                <div style={{fontFamily:"'Nunito',sans-serif", fontSize:11, fontWeight:700, color:"var(--text-secondary)"}}>
+                  ₹{((data.spent||{})[key]||0).toLocaleString()} / ₹{((data.budgets||{})[key]||0).toLocaleString()}
+                </div>
+              </div>
+              <div style={{
+                fontSize:11, fontWeight:800, fontFamily:"'Nunito',sans-serif",
+                color:((data.spent||{})[key]||0)>((data.budgets||{})[key]||0)?"#ff6b6b":"#6fd4a8",
+              }}>
+                {((data.spent||{})[key]||0)>((data.budgets||{})[key]||0)?"Over":"OK"}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   SETUP SCREENS
+══════════════════════════════════════════════════════ */
+function TimezoneSetup({ onComplete }) {
+  const [country, setCountry] = useState("");
+  const [timezone, setTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+  );
+  return (
+    <div style={{
+      minHeight:"100dvh", background:"var(--bg-primary)",
+      display:"flex", alignItems:"center", justifyContent:"center", padding:"20px",
+    }}>
+      <div style={{
+        background:"var(--bg-card)", borderRadius:32, padding:"40px 32px",
+        maxWidth:420, width:"100%", boxShadow:`0 32px 80px var(--shadow-heavy)`,
+        animation:"popIn 0.5s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        <div style={{textAlign:"center", marginBottom:28}}>
+          <div style={{fontSize:52, marginBottom:12}}>🌍</div>
+          <h2 style={{fontFamily:"'Nunito',sans-serif", fontSize:22, fontWeight:900, color:"var(--text-primary)", marginBottom:8}}>Setup Your Location</h2>
+          <p style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700, color:"var(--text-secondary)"}}>For automatic month-end detection</p>
+        </div>
+        <div style={{marginBottom:18}}>
+          <label style={{display:"block", fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:800, color:"var(--text-secondary)", marginBottom:7, textTransform:"uppercase", letterSpacing:0.5}}>Country</label>
+          <input type="text" placeholder="e.g., India" value={country}
+            onChange={e=>setCountry(e.target.value)}
+            style={{
+              width:"100%", border:`2px solid var(--border-color)`,
+              borderRadius:14, padding:"12px 16px",
+              fontFamily:"'Nunito',sans-serif", fontSize:15, fontWeight:700,
+              color:"var(--text-primary)", background:"var(--bg-input)", outline:"none",
+            }}
+          />
+        </div>
+        <div style={{marginBottom:28}}>
+          <label style={{display:"block", fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:800, color:"var(--text-secondary)", marginBottom:7, textTransform:"uppercase", letterSpacing:0.5}}>Timezone</label>
+          <select value={timezone} onChange={e=>setTimezone(e.target.value)}
+            style={{
+              width:"100%", border:`2px solid var(--border-color)`,
+              borderRadius:14, padding:"12px 16px",
+              fontFamily:"'Nunito',sans-serif", fontSize:15, fontWeight:700,
+              color:"var(--text-primary)", background:"var(--bg-input)", outline:"none",
+            }}>
+            <option value="">Select timezone...</option>
+            <option value="Asia/Kolkata">Asia/Kolkata (IST) 🇮🇳</option>
+            <option value="Asia/Dubai">Asia/Dubai (GST) 🇦🇪</option>
+            <option value="America/New_York">America/New_York (EST) 🇺🇸</option>
+            <option value="America/Los_Angeles">America/Los_Angeles (PST) 🇺🇸</option>
+            <option value="Europe/London">Europe/London (GMT) 🇬🇧</option>
+            <option value="Asia/Singapore">Asia/Singapore (SGT) 🇸🇬</option>
+            <option value="Australia/Sydney">Australia/Sydney (AEDT) 🇦🇺</option>
+            <option value="Asia/Tokyo">Asia/Tokyo (JST) 🇯🇵</option>
+          </select>
+        </div>
+        <button onClick={() => { if (country&&timezone) { ls.set(TIMEZONE_SK,{country,timezone}); onComplete(); } }}
+          disabled={!country||!timezone}
+          style={{
+            width:"100%",
+            background:(country&&timezone)?"linear-gradient(135deg,#FFB6C1,#c8a0e0)":"#e8ddf0",
+            border:"none", borderRadius:999, padding:"14px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+            color:(country&&timezone)?"white":"#c8b8d8",
+            cursor:(country&&timezone)?"pointer":"not-allowed",
+            boxShadow:(country&&timezone)?"0 6px 20px rgba(255,182,193,0.5)":"none",
+          }}>Continue →</button>
+      </div>
+    </div>
+  );
+}
+
+function SalarySetup({ currentBudgets, onComplete }) {
+  const [salary, setSalary] = useState("");
+  const [budgets, setBudgets] = useState(currentBudgets);
+  const [step, setStep] = useState(1);
+  const totalBudget = Object.values(budgets).reduce((a,b)=>a+b,0);
+  const projectedSavings = Number(salary) - totalBudget;
+  return (
+    <div style={{minHeight:"100dvh", background:"var(--bg-primary)", padding:"20px", overflowY:"auto"}}>
+      <div style={{maxWidth:460, margin:"0 auto", paddingTop:40}}>
+        <div style={{textAlign:"center", marginBottom:28}}>
+          <img src="logo.png" alt="Spendora" style={{width:80, height:80, marginBottom:14}}/>
+          <h2 style={{fontFamily:"'Nunito',sans-serif", fontSize:24, fontWeight:900, background:"linear-gradient(135deg,#c06080,#9b6dbd)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:6}}>
+            Monthly Budget Setup
+          </h2>
+          <p style={{fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700, color:"var(--text-secondary)"}}>
+            Step {step} of 2
+          </p>
+        </div>
+
+        {step === 1 ? (
+          <div style={{background:"var(--bg-card)", borderRadius:24, padding:"28px 24px", boxShadow:`0 8px 32px var(--shadow)`}}>
+            <div style={{fontSize:44, textAlign:"center", marginBottom:12}}>💰</div>
+            <h3 style={{fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:"var(--text-primary)", textAlign:"center", marginBottom:20}}>
+              What is your income this month?
+            </h3>
+            <div style={{
+              display:"flex", alignItems:"center",
+              border:`2px solid var(--border-color)`, borderRadius:16,
+              background:"var(--bg-input)", overflow:"hidden", marginBottom:20,
+            }}>
+              <span style={{padding:"0 16px", fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:26, color:"#c8a0e0"}}>₹</span>
+              <input type="number" placeholder="0" value={salary}
+                onChange={e=>setSalary(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&salary&&Number(salary)>0&&setStep(2)}
+                autoFocus
+                style={{
+                  flex:1, border:"none", outline:"none",
+                  fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:32,
+                  color:"var(--text-primary)", background:"transparent", padding:"16px 12px",
+                }}
+              />
+            </div>
+            <button onClick={()=>salary&&Number(salary)>0&&setStep(2)}
+              disabled={!salary||Number(salary)<=0}
+              style={{
+                width:"100%",
+                background:(salary&&Number(salary)>0)?"linear-gradient(135deg,#FFB6C1,#c8a0e0)":"#e8ddf0",
+                border:"none", borderRadius:999, padding:"14px",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+                color:(salary&&Number(salary)>0)?"white":"#c8b8d8",
+                cursor:(salary&&Number(salary)>0)?"pointer":"not-allowed",
+                boxShadow:(salary&&Number(salary)>0)?"0 6px 20px rgba(255,182,193,0.5)":"none",
+              }}>Next →</button>
+          </div>
+        ) : (
+          <div>
+            <div style={{background:"var(--bg-card)", borderRadius:24, padding:"24px", boxShadow:`0 8px 32px var(--shadow)`, marginBottom:16}}>
+              <h3 style={{fontFamily:"'Nunito',sans-serif", fontSize:17, fontWeight:900, color:"var(--text-primary)", marginBottom:18, textAlign:"center"}}>
+                Set Budget Per Category
+              </h3>
+              {Object.entries(CATS).map(([k, cat]) => (
+                <div key={k} style={{marginBottom:12, padding:"14px", border:`2px solid ${cat.color}`, borderRadius:16, background:cat.lightBg}}>
+                  <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
+                    <span style={{fontSize:22}}>{cat.emoji}</span>
+                    <label style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:900, color:"var(--text-primary)"}}>{cat.label}</label>
+                  </div>
+                  <div style={{display:"flex", alignItems:"center", gap:6}}>
+                    <span style={{fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:cat.dark}}>₹</span>
+                    <input type="number" value={budgets[k]}
+                      onChange={e=>setBudgets({...budgets,[k]:Number(e.target.value)})}
+                      style={{
+                        flex:1, border:`1.5px solid ${cat.color}`, borderRadius:10,
+                        padding:"10px 12px", fontFamily:"'Nunito',sans-serif",
+                        fontSize:16, fontWeight:800, color:"var(--text-primary)",
+                        background:"var(--bg-input)", outline:"none",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              background:projectedSavings>=0?"linear-gradient(135deg,#6fd4a8,#40c8a0)":"linear-gradient(135deg,#ff6b6b,#ff8e53)",
+              borderRadius:20, padding:"18px 20px", marginBottom:16,
+              boxShadow:`0 6px 24px ${projectedSavings>=0?"rgba(111,212,168,0.4)":"rgba(255,107,107,0.4)"}`,
+            }}>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:800, color:"white", marginBottom:4, opacity:0.9}}>
+                {projectedSavings>=0?"If you stick to these budgets, you will save:":"Budget exceeds income by:"}
+              </div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:34, fontWeight:900, color:"white"}}>₹{Math.abs(projectedSavings).toLocaleString()}</div>
+              <div style={{fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700, color:"white", marginTop:6, opacity:0.85}}>
+                {projectedSavings>=0?"this month 💪":"reduce your budgets ⚠️"}
+              </div>
+            </div>
+            <div style={{display:"flex", gap:8}}>
+              <button onClick={()=>setStep(1)} style={{
+                flex:0, border:`2px solid var(--border-color)`, background:"var(--bg-card)",
+                borderRadius:14, padding:"14px 20px",
+                fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:14,
+                color:"var(--text-secondary)", cursor:"pointer",
+              }}>← Back</button>
+              <button onClick={()=>onComplete(Number(salary),budgets)} style={{
+                flex:1, background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+                border:"none", borderRadius:14, padding:"14px",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+                color:"white", cursor:"pointer", boxShadow:"0 6px 20px rgba(255,182,193,0.5)",
+              }}>Start Tracking ✨</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   SIGN IN SCREEN
+══════════════════════════════════════════════════════ */
+function SignInScreen() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const handleGoogleSignIn = async () => {
+    if (!isFirebaseConfigured) { setError("Firebase not configured."); return; }
+    setLoading(true); setError(null);
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+    } catch (err) {
+      if (err.code==='auth/popup-closed-by-user') setError("Sign-in cancelled.");
+      else if (err.code==='auth/unauthorized-domain') setError("Domain not authorized in Firebase Console.");
+      else setError("Sign-in failed: " + err.message);
+      setLoading(false);
+    }
+  };
+  return (
+    <div style={{
+      minHeight:"100dvh",
+      background:`linear-gradient(160deg,var(--bg-gradient-start) 0%,var(--bg-gradient-end) 100%)`,
+      display:"flex", alignItems:"center", justifyContent:"center", padding:"20px",
+      position:"relative", overflow:"hidden",
+    }}>
+      <Blobs/>
+      <div style={{
+        background:"var(--bg-card)", borderRadius:32, padding:"48px 36px",
+        maxWidth:420, width:"100%", boxShadow:`0 32px 80px var(--shadow-heavy)`,
+        textAlign:"center", animation:"popIn 0.5s cubic-bezier(.34,1.56,.64,1)",
+        position:"relative", zIndex:1,
+      }}>
+        <img src="logo.png" alt="Spendora" style={{
+          width:120, height:120, marginBottom:20,
+          animation:"float 3s ease-in-out infinite alternate",
+        }}/>
+        <h1 style={{
+          fontFamily:"'Nunito',sans-serif", fontSize:32, fontWeight:900,
+          background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:6,
+        }}>Spendora</h1>
+        <p style={{fontFamily:"'Nunito',sans-serif", fontSize:16, fontWeight:800, color:"var(--text-secondary)", marginBottom:32, lineHeight:1.5}}>
+          Your Wallet's Glow-Up. 💖
+        </p>
+        {!isFirebaseConfigured && (
+          <div style={{background:"#fff3cd", border:"2px solid #ffc107", borderRadius:16, padding:"12px", marginBottom:20, fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700, color:"#856404", textAlign:"left"}}>
+            ⚠️ Firebase not configured yet.
+          </div>
+        )}
+        {error && (
+          <div style={{background:"#fff0f0", border:"2px solid #ff6b6b", borderRadius:16, padding:"12px", marginBottom:20, fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:700, color:"#ff6b6b"}}>
+            {error}
+          </div>
+        )}
+        <button onClick={handleGoogleSignIn} disabled={loading||!isFirebaseConfigured} style={{
+          width:"100%",
+          background:(loading||!isFirebaseConfigured)?"#e8ddf0":"white",
+          border:`2px solid var(--border-color)`, borderRadius:16, padding:"16px 24px",
+          fontFamily:"'Nunito',sans-serif", fontSize:16, fontWeight:900,
+          color:(loading||!isFirebaseConfigured)?"#c8b8d8":"var(--text-primary)",
+          cursor:(loading||!isFirebaseConfigured)?"not-allowed":"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+          boxShadow:`0 4px 16px var(--shadow)`, transition:"all 0.2s ease",
+        }}>
+          {loading ? (
+            <>
+              <div style={{width:20, height:20, border:"3px solid #e8ddf0", borderTopColor:"#9b6dbd", borderRadius:"50%", animation:"spin 0.8s linear infinite"}}/>
+              Signing in...
+            </>
+          ) : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </>
+          )}
+        </button>
+        <div style={{marginTop:24, fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700, color:"var(--text-tertiary)", lineHeight:1.6}}>
+          Sign in to sync across all your devices 🤝
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   SETUP BUDGETS SCREEN (Edit)
+══════════════════════════════════════════════════════ */
+function SetupScreen({ budgets, onChange, onSave }) {
+  return (
+    <div style={{maxWidth:420, margin:"0 auto", padding:"28px 18px"}}>
+      <div style={{textAlign:"center", marginBottom:22}}>
+        <img src="logo.png" alt="Spendora" style={{width:72, height:72, marginBottom:12}}/>
+        <h2 style={{fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#c06080,#9b6dbd)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"'Nunito',sans-serif"}}>Edit Budgets</h2>
+      </div>
+      {Object.entries(CATS).map(([k, cat]) => (
+        <div key={k} style={{
+          background:"var(--bg-card)", borderRadius:20, padding:"14px 16px",
+          marginBottom:10, boxShadow:`0 4px 16px var(--shadow)`,
+          border:`2px solid ${cat.color}`, display:"flex", alignItems:"center", gap:12,
+        }}>
+          <span style={{fontSize:26, flexShrink:0}}>{cat.emoji}</span>
+          <div style={{flex:1}}>
+            <label style={{fontWeight:800, color:"var(--text-primary)", fontSize:13, display:"block", marginBottom:5, fontFamily:"'Nunito',sans-serif"}}>{cat.label}</label>
+            <div style={{display:"flex", alignItems:"center", gap:5}}>
+              <span style={{fontWeight:900, color:cat.dark, fontSize:16}}>₹</span>
+              <input type="number" value={budgets[k]}
+                onChange={e=>onChange(k, Number(e.target.value))}
+                style={{
+                  border:`1.5px solid ${cat.color}`, borderRadius:10,
+                  padding:"8px 10px", fontFamily:"'Nunito',sans-serif",
+                  fontWeight:800, fontSize:16, width:"100%", outline:"none",
+                  color:"var(--text-primary)", background:"var(--bg-input)",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={onSave} style={{
+        width:"100%", marginTop:10,
+        background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+        color:"white", border:"none", borderRadius:999, padding:"15px",
+        fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:17,
+        cursor:"pointer", boxShadow:"0 8px 24px rgba(255,182,193,0.5)",
+      }}>Save Changes ✓</button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════ */
+function Spendora() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [state, setState] = useState(getInitState);
+  const [theme, setTheme] = useState(() => ls.get(THEME_SK, 'light'));
+  const [syncing, setSyncing] = useState(false);
+  const [screen, setScreen] = useState("main"); // main | setup
+  const [activeTab, setActiveTab] = useState("log");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [pendingAmt, setPendingAmt] = useState(null);
+  const [toast, setToast] = useState({visible:false, message:"", type:"info"});
+  const [glutton, setGlutton] = useState(null);
+  const [nudge, setNudge] = useState({visible:false, message:""});
+  const [confetti, setConfetti] = useState(false);
+  const [setupBudgets, setSetupBudgets] = useState(state.budgets);
+  const [notifEnabled, setNotifEnabled] = useState(() => ls.get(NOTIF_SK, {enabled:false}).enabled);
+  const [showQuickLog, setShowQuickLog] = useState(false);
+  const [needsTimezone, setNeedsTimezone] = useState(false);
+  const [needsSalarySetup, setNeedsSalarySetup] = useState(false);
+  const [bucketHistory, setBucketHistory] = useState(null);
+  const [showYearlyReport, setShowYearlyReport] = useState(false);
+  const [monthDetail, setMonthDetail] = useState(null);
+  const inputRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+  const firestoreUnsubRef = useRef(null);
+  const isFirstLoadRef = useRef(true);
+  const isDark = theme === 'dark';
+
+  // Apply theme
+  useEffect(() => {
+    document.body.classList.toggle('dark-mode', isDark);
+    ls.set(THEME_SK, theme);
+  }, [theme]);
+
+  const showToast = useCallback((msg, type="info", dur=3000) => {
+    setToast({visible:true, message:msg, type});
+    setTimeout(() => setToast(t => ({...t, visible:false})), dur);
+  }, []);
+
+  // Check and handle month rollover
+  const checkMonthRollover = useCallback((data, setter) => {
+    const currentKey = getMonthKey();
+    if (data.monthKey && data.monthKey !== currentKey) {
+      const star = calculateStar(data.spent, data.budgets);
+      const totalSpent = Object.values(data.spent).reduce((a,b)=>a+b,0);
+      const totalBudget = Object.values(data.budgets).reduce((a,b)=>a+b,0);
+      const saved = (data.salary||0) - totalSpent;
+      const newYearlyLog = {
+        ...data.yearlyLog,
+        [data.monthKey]: {
+          star, spent:{...data.spent}, budgets:{...data.budgets},
+          transactions:[...data.transactions], salary:data.salary,
+          totalSpent, totalBudget, saved, monthName:data.monthName,
+        }
+      };
+      const newSpent = {};
+      Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
+      const newData = {
+        ...data,
+        monthKey: currentKey,
+        monthName: getMonthName(),
+        spent: newSpent,
+        transactions: [],
+        salary: 0,
+        yearlyLog: newYearlyLog,
+        currentStar: null,
+      };
+      setter(newData);
+      showToast(star==="pink"
+        ? `🎉 ${data.monthName} complete! Pink Star earned ⭐`
+        : `📊 ${data.monthName} done. Black Star — let's improve!`,
+        "success", 5000);
+      return newData;
+    }
+    return null;
+  }, [showToast]);
+
+  // Firebase auth + real-time listener
+  useEffect(() => {
+    if (!isFirebaseConfigured) { setAuthLoading(false); return; }
+
+    const unsubAuth = auth.onAuthStateChanged(firebaseUser => {
+      setAuthLoading(false);
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        });
+        // Setup real-time Firestore listener
+        setSyncing(true);
+        if (firestoreUnsubRef.current) firestoreUnsubRef.current();
+        firestoreUnsubRef.current = db.collection('users').doc(firebaseUser.uid)
+          .onSnapshot(doc => {
+            setSyncing(false);
+            if (doc.exists) {
+              const data = doc.data();
+              // On first load, check month rollover
+              if (isFirstLoadRef.current) {
+                isFirstLoadRef.current = false;
+                const rolledOver = checkMonthRollover(data, (newData) => {
+                  setState(newData);
+                  // Save rolled-over state back
+                  saveToFirestore(firebaseUser.uid, newData).catch(()=>{});
+                });
+                if (!rolledOver) {
+                  setState(data);
+                }
+                if (!data.salary || data.salary === 0) setNeedsSalarySetup(true);
+                if (!ls.get(TIMEZONE_SK, null)) setNeedsTimezone(true);
+              } else {
+                // Subsequent updates from other devices — merge carefully
+                setState(prev => {
+                  // Only update if the Firestore version is newer (more transactions)
+                  if (data.transactions && data.transactions.length >= (prev.transactions||[]).length) {
+                    return data;
+                  }
+                  return prev;
+                });
+              }
+            } else {
+              // New user
+              const initial = getInitState();
+              saveToFirestore(firebaseUser.uid, initial).catch(()=>{});
+              setState(initial);
+              setNeedsSalarySetup(true);
+              if (!ls.get(TIMEZONE_SK, null)) setNeedsTimezone(true);
+              isFirstLoadRef.current = false;
+            }
+          }, err => {
+            setSyncing(false);
+            console.error("Firestore listener error:", err);
+            showToast("Sync error — check connection", "error");
+          });
+      } else {
+        setUser(null);
+        setState(getInitState());
+        if (firestoreUnsubRef.current) { firestoreUnsubRef.current(); firestoreUnsubRef.current = null; }
+        isFirstLoadRef.current = true;
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      if (firestoreUnsubRef.current) firestoreUnsubRef.current();
+    };
+  }, [checkMonthRollover, showToast]);
+
+  // Save to Firestore on state change (debounced, skip first-load syncs)
+  useEffect(() => {
+    if (!user || !isFirebaseConfigured) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToFirestore(user.uid, state).catch(()=>{});
+    }, 800);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [state, user]);
+
+  // Check month rollover every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setState(prev => {
+        const rolledData = checkMonthRollover(prev, newData => {
+          setState(newData);
+          if (user) saveToFirestore(user.uid, newData).catch(()=>{});
+        });
+        return prev;
+      });
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [checkMonthRollover, user]);
+
+  // Notification scheduling
+  useEffect(() => {
+    if (notifEnabled && user) {
+      const firstName = user.displayName?.split(' ')[0] || 'friend';
+      scheduleNextNotification(firstName);
+    } else {
+      clearNotifTimers();
+    }
+    return () => clearNotifTimers();
+  }, [notifEnabled, user]);
+
+  // Listen for SW messages (notification click → open quick log)
+  useEffect(() => {
+    const handler = () => setShowQuickLog(true);
+    window.addEventListener('open-quick-log', handler);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data?.type === 'OPEN_QUICK_LOG') setShowQuickLog(true);
+      });
+    }
+    return () => window.removeEventListener('open-quick-log', handler);
+  }, []);
+
+  // SMS paste via share target
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedText = params.get('text');
+    if (sharedText) {
+      const parsed = parseSMS(sharedText);
+      if (parsed) {
+        setPendingAmt(parsed);
+        showToast(`✨ Auto-detected ₹${parsed} from SMS!`, "success");
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Core actions
+  const enableNotifications = async () => {
+    if (!('Notification' in window)) { showToast("Notifications not supported 😔", "error"); return; }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setNotifEnabled(true);
+      ls.set(NOTIF_SK, { enabled:true, permission:'granted' });
+      showToast("🔔 Reminders enabled!", "success");
+    } else {
+      setNotifEnabled(false);
+      ls.set(NOTIF_SK, { enabled:false, permission:'denied' });
+      showToast("Notifications blocked. Enable in browser settings.", "error");
+    }
+  };
+
+  const disableNotifications = () => {
+    setNotifEnabled(false);
+    ls.set(NOTIF_SK, { enabled:false, permission:'denied' });
+    clearNotifTimers();
+    showToast("🔕 Reminders off", "info");
+  };
+
+  const handleAdd = () => {
+    const amt = Number(amount);
+    if (!amt || amt <= 0) { showToast("Enter a valid amount 🙈", "warn"); inputRef.current?.focus(); return; }
+    setPendingAmt(amt);
+  };
+
+  const handlePasteSMS = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = parseSMS(text);
+      if (parsed) { setPendingAmt(parsed); showToast(`✨ Found ₹${parsed} in clipboard!`, "success"); }
+      else showToast("No amount found in clipboard 😕", "warn");
+    } catch { showToast("Couldn't read clipboard", "error"); }
+  };
+
+  const handlePick = useCallback((catKey, customAmount=null) => {
+    const amt = customAmount !== null ? customAmount : pendingAmt;
+    setPendingAmt(null);
+    if (!amt || amt <= 0) return;
+    markSpentToday();
+
+    const budget = state.budgets[catKey];
+    const newSpent = state.spent[catKey] + amt;
+    const remaining = budget - newSpent;
+    const isNowOver = newSpent > budget;
+    const overspentAmt = isNowOver ? newSpent - budget : 0;
+
+    const newState = {
+      ...state,
+      spent: { ...state.spent, [catKey]: newSpent },
+      transactions: [
+        ...state.transactions,
+        {
+          category: catKey, amount: amt,
+          note: note.trim() || null,
+          time: new Date().toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }),
+        },
+      ],
+    };
+    newState.currentStar = calculateStar(newState.spent, newState.budgets);
+    setState(newState);
+    setAmount("");
+    setNote("");
+
+    if (isNowOver) {
+      if (navigator.vibrate) navigator.vibrate([200,100,200,100,400]);
+      const totalBudget = Object.values(newState.budgets).reduce((a,b)=>a+b,0);
+      const totalSpent = Object.values(newState.spent).reduce((a,b)=>a+b,0);
+      const projectedSavingsLost = Math.max(0, (state.salary||0) - totalBudget);
+      setTimeout(() => setGlutton({ category:catKey, overspentAmt, projectedSavingsLost }), 150);
+    } else if (remaining <= 300) {
+      if (navigator.vibrate) navigator.vibrate([150,100,150]);
+      showToast(`⚡ Only ₹${Math.max(0,remaining)} left in ${CATS[catKey].label}!`, "warn");
+      if (catKey === "food") {
+        setTimeout(() => setNudge({ visible:true, message:NUDGES[Math.floor(Math.random()*NUDGES.length)] }), 700);
+      }
+    } else if (newSpent > budget * 0.5) {
+      showToast(`💡 Halfway through ${CATS[catKey].label} budget!`, "info");
+    } else {
+      showToast(`✅ ₹${amt} logged!`, "success");
+    }
+
+    // Confetti if still all within budget
+    const allUnder = Object.keys(CATS).every(k => {
+      const s = k === catKey ? newSpent : state.spent[k];
+      return s <= newState.budgets[k];
+    });
+    if (allUnder && Object.values(newState.spent).some(s => s > 0)) {
+      setTimeout(() => { setConfetti(true); setTimeout(()=>setConfetti(false), 3500); }, 400);
+    }
+  }, [pendingAmt, state, note, showToast]);
+
+  const handleQuickLogSubmit = (amt, cat) => { handlePick(cat, amt); setShowQuickLog(false); };
+  const handleSignOut = async () => {
+    if (!window.confirm("Sign out of Spendora?")) return;
+    try { await auth.signOut(); } catch { showToast("Sign out failed", "error"); }
+  };
+  const toggleTheme = () => setTheme(t => t==='light'?'dark':'light');
+
+  // Computed values
+  const totalSpent = Object.values(state.spent).reduce((a,b)=>a+b,0);
+  const totalBudget = Object.values(state.budgets).reduce((a,b)=>a+b,0);
+  const overPct = totalBudget > 0 ? Math.min((totalSpent/totalBudget)*100,100) : 0;
+  const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
+  const projectedSavings = (state.salary||0) - totalSpent;
+
+  // Loading
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight:"100dvh",
+        background:`linear-gradient(160deg,var(--bg-gradient-start) 0%,var(--bg-gradient-end) 100%)`,
+        display:"flex", alignItems:"center", justifyContent:"center",
+      }}>
+        <div style={{textAlign:"center"}}>
+          <img src="logo.png" alt="Spendora" style={{width:90, height:90, marginBottom:16, animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <div style={{fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:800, color:"var(--text-secondary)"}}>Loading Spendora...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <SignInScreen/>;
+  if (needsTimezone) return <TimezoneSetup onComplete={()=>setNeedsTimezone(false)}/>;
+  if (needsSalarySetup) return (
+    <SalarySetup
+      currentBudgets={state.budgets}
+      onComplete={(salary, budgets) => {
+        setState(s => ({...s, salary, budgets}));
+        setNeedsSalarySetup(false);
+      }}
+    />
+  );
+
+  // Yearly report
+  if (showYearlyReport && !monthDetail) return (
+    <YearlyReport
+      yearlyLog={state.yearlyLog}
+      onMonthClick={(key, data) => setMonthDetail({key,data})}
+      onClose={() => setShowYearlyReport(false)}
+      isDark={isDark}
+    />
+  );
+  if (monthDetail) return (
+    <MonthDetailView
+      monthKey={monthDetail.key}
+      data={monthDetail.data}
+      onClose={() => setMonthDetail(null)}
+      isDark={isDark}
+    />
+  );
+
+  // Setup (edit budgets)
+  if (screen === "setup") return (
+    <div style={{minHeight:"100dvh", background:"var(--bg-primary)", position:"relative"}}>
+      <Blobs/>
+      <div style={{position:"relative", zIndex:1}}>
+        <div style={{padding:"18px 18px 0"}}>
+          <button onClick={()=>setScreen("main")} style={{
+            background:"var(--bg-secondary)", border:"none", borderRadius:999,
+            padding:"8px 18px", fontFamily:"'Nunito',sans-serif",
+            fontWeight:800, color:"var(--text-primary)", cursor:"pointer",
+            boxShadow:`0 2px 12px var(--shadow)`, fontSize:14,
+          }}>← Back</button>
+        </div>
+        <SetupScreen
+          budgets={setupBudgets}
+          onChange={(k,v) => setSetupBudgets(p=>({...p,[k]:v}))}
+          onSave={() => {
+            setState(p => ({...p, budgets:setupBudgets}));
+            setScreen("main");
+            showToast("✨ Budgets updated!", "success");
+          }}
+        />
+      </div>
+    </div>
+  );
+
+  /* ── MAIN DASHBOARD ── */
+  return (
+    <div style={{minHeight:"100dvh", background:"var(--bg-primary)", position:"relative"}}>
+      <Blobs/>
+      <Confetti active={confetti}/>
+      <Toast {...toast}/>
+
+      {/* Glutton Modal */}
+      {glutton && (
+        <GluttonModal
+          category={glutton.category}
+          overspentAmount={glutton.overspentAmt}
+          projectedSavingsLost={glutton.projectedSavingsLost}
+          onClose={()=>setGlutton(null)}
+          isDark={isDark}
+        />
+      )}
+
+      <Nudge visible={nudge.visible} message={nudge.message} onClose={()=>setNudge({visible:false,message:""})}/>
+
+      {bucketHistory && (
+        <BucketHistory
+          category={bucketHistory}
+          transactions={state.transactions}
+          monthName={state.monthName}
+          onClose={()=>setBucketHistory(null)}
+          isDark={isDark}
+        />
+      )}
+
+      {/* Dark mode toggle */}
+      <button onClick={toggleTheme} title={isDark?'Light Mode':'Dark Mode'} style={{
+        position:"fixed", top:20, right:20, zIndex:10001,
+        width:46, height:46, borderRadius:"50%",
+        background:isDark?"linear-gradient(135deg,#FFB6C1,#ffd700)":"linear-gradient(135deg,#4a4a6a,#2d2d4a)",
+        border:"none", cursor:"pointer", display:"flex",
+        alignItems:"center", justifyContent:"center", fontSize:22,
+        boxShadow:`0 4px 16px var(--shadow)`, transition:"all 0.3s ease",
+      }}>{isDark?'☀️':'🌙'}</button>
+
+      {/* Notification toggle */}
+      <button
+        onClick={notifEnabled ? disableNotifications : enableNotifications}
+        title={notifEnabled?'Notifications ON – tap to disable':'Notifications OFF – tap to enable'}
+        style={{
+          position:"fixed", top:74, right:20, zIndex:10001,
+          width:46, height:46, borderRadius:"50%",
+          background:notifEnabled
+            ? "linear-gradient(135deg,#6fd4a8,#40c8a0)"
+            : "linear-gradient(135deg,#ff6b6b,#ff8e53)",
+          border:"none", cursor:"pointer", display:"flex",
+          alignItems:"center", justifyContent:"center", fontSize:22,
+          boxShadow:`0 4px 16px var(--shadow)`, transition:"all 0.3s ease",
+          animation:notifEnabled?"":"shake 2s ease-in-out infinite",
+        }}>
+        {notifEnabled ? '🔔' : '🔕'}
+      </button>
+
+      {/* Profile pill */}
+      <div style={{
+        position:"fixed", top:20, left:20, zIndex:10001,
+        display:"flex", alignItems:"center", gap:10,
+        background:"var(--bg-card)", padding:"8px 14px 8px 8px",
+        borderRadius:999, boxShadow:`0 4px 16px var(--shadow)`,
+      }}>
+        <img
+          src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName||'U')}&background=FFB6C1&color=fff&size=72`}
+          alt="Profile"
+          style={{width:34, height:34, borderRadius:"50%", border:"2.5px solid #FFB6C1"}}
+        />
+        <div>
+          <div style={{fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:900, color:"var(--text-primary)"}}>
+            {user.displayName?.split(' ')[0] || 'Friend'}
+          </div>
+          <button onClick={handleSignOut} style={{
+            fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:700,
+            color:"var(--text-tertiary)", background:"none", border:"none", cursor:"pointer", padding:0,
+          }}>Sign Out</button>
+        </div>
+      </div>
+
+      {/* Syncing indicator */}
+      {syncing && (
+        <div style={{
+          position:"fixed", bottom:16, right:16, zIndex:10001,
+          background:"var(--bg-card)", padding:"8px 14px", borderRadius:999,
+          boxShadow:`0 4px 16px var(--shadow)`,
+          fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700,
+          color:"var(--text-secondary)", display:"flex", alignItems:"center", gap:8,
+        }}>
+          <div style={{width:11, height:11, border:`2px solid var(--text-tertiary)`, borderTopColor:"#FFB6C1", borderRadius:"50%", animation:"spin 0.8s linear infinite"}}/>
+          Syncing...
+        </div>
+      )}
+
+      {/* Quick Log Modal */}
+      {showQuickLog && (
+        <QuickLogModal onLog={handleQuickLogSubmit} onSkip={()=>setShowQuickLog(false)} isDark={isDark}/>
+      )}
+
+      {/* Category Picker Sheet */}
+      {pendingAmt !== null && (
+        <CategorySheet
+          amount={pendingAmt} spent={state.spent} budgets={state.budgets}
+          onPick={handlePick} onCancel={()=>setPendingAmt(null)} isDark={isDark}
+        />
+      )}
+
+      {/* Main Content */}
+      <div style={{maxWidth:500, margin:"0 auto", position:"relative", zIndex:1, paddingBottom:36, paddingTop:82}}>
+
+        {/* Header card */}
+        <div style={{
+          background:`linear-gradient(160deg,var(--bg-gradient-start) 0%,var(--bg-gradient-end) 100%)`,
+          padding:"24px 18px 18px", borderRadius:"0 0 30px 30px",
+          boxShadow:`0 8px 30px var(--shadow)`, position:"relative", overflow:"hidden",
+        }}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+            <div>
+              <div style={{fontSize:10, fontWeight:800, color:"var(--text-tertiary)", letterSpacing:2, textTransform:"uppercase", fontFamily:"'Nunito',sans-serif"}}>Spendora</div>
+              <h1 style={{
+                margin:"4px 0 2px", fontSize:20, fontWeight:900,
+                background:"linear-gradient(135deg,#c06080,#9b6dbd)",
+                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+                fontFamily:"'Nunito',sans-serif",
+              }}>Hi, {user.displayName?.split(' ')[0] || 'Friend'}! 👋</h1>
+              <div style={{fontSize:11, color:"var(--text-secondary)", fontWeight:700, fontFamily:"'Nunito',sans-serif"}}>{state.monthName}</div>
+            </div>
+            <MonthlyStarBadge
+              monthName={state.monthName}
+              currentStar={currentStar}
+              totalSpent={totalSpent}
+              salary={state.salary}
+            />
+          </div>
+
+          {/* Overall budget bar */}
+          <div style={{marginTop:16}}>
+            <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
+              <span style={{fontSize:11, fontWeight:800, color:"var(--text-primary)", fontFamily:"'Nunito',sans-serif"}}>
+                ₹{totalSpent.toLocaleString()} / ₹{totalBudget.toLocaleString()}
+              </span>
+              <span style={{fontSize:11, fontWeight:700, color:"var(--text-secondary)", fontFamily:"'Nunito',sans-serif"}}>
+                {overPct.toFixed(0)}% used
+              </span>
+            </div>
+            <div style={{background:isDark?"#3a2a45":"white", borderRadius:999, height:9, overflow:"hidden", boxShadow:`inset 0 2px 6px var(--shadow)`}}>
+              <div style={{
+                height:"100%", borderRadius:999,
+                background:overPct>=90?"linear-gradient(90deg,#ff6b6b,#ff8e53)":overPct>=60?"linear-gradient(90deg,#ffb347,#ffd700)":"linear-gradient(90deg,#FFB6C1,#c8a0e0)",
+                width:`${overPct}%`,
+                transition:"width 0.7s cubic-bezier(.4,0,.2,1)",
+              }}/>
+            </div>
+          </div>
+
+          {/* Projected savings */}
+          {state.salary > 0 && (
+            <div style={{
+              marginTop:12, padding:"10px 14px", borderRadius:14,
+              background:projectedSavings>=0?(isDark?"rgba(111,212,168,0.15)":"rgba(111,212,168,0.2)"):(isDark?"rgba(255,107,107,0.15)":"rgba(255,107,107,0.1)"),
+              border:`1.5px solid ${projectedSavings>=0?"#6fd4a8":"#ff6b6b"}40`,
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+            }}>
+              <span style={{fontFamily:"'Nunito',sans-serif", fontSize:11, fontWeight:800, color:"var(--text-secondary)"}}>
+                {projectedSavings>=0?"On track to save:":"Overspent by:"}
+              </span>
+              <span style={{fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:900, color:projectedSavings>=0?"#40c8a0":"#ff6b6b"}}>
+                ₹{Math.abs(projectedSavings).toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Category rings */}
+        <div style={{padding:"20px 18px 0"}}>
+          <div style={{display:"flex", justifyContent:"space-around", gap:4}}>
+            {Object.entries(CATS).map(([k, cat]) => (
+              <Ring key={k}
+                spent={state.spent[k]} budget={state.budgets[k]}
+                color={cat.color} dark={cat.dark}
+                emoji={cat.emoji} label={cat.label}
+                onClick={()=>setBucketHistory(k)}
+              />
+            ))}
+          </div>
+          <div style={{textAlign:"center", marginTop:6}}>
+            <span style={{fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:700, color:"var(--text-tertiary)"}}>
+              Tap a ring to see history
+            </span>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{padding:"16px 18px 0", display:"flex", gap:8}}>
+          {["log", "history"].map(tab => (
+            <button key={tab} onClick={()=>setActiveTab(tab)} style={{
+              flex:1, border:"none", borderRadius:14, padding:"10px 0",
+              fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:13,
+              cursor:"pointer",
+              background:activeTab===tab?"linear-gradient(135deg,#FFB6C1,#c8a0e0)":"var(--bg-secondary)",
+              color:activeTab===tab?"white":"var(--text-secondary)",
+              boxShadow:activeTab===tab?"0 4px 16px rgba(255,182,193,0.4)":`0 2px 10px var(--shadow)`,
+              transition:"all 0.25s ease",
+              WebkitTapHighlightColor:"transparent",
+            }}>
+              {tab==="log" ? "💸 Log Spend" : `📋 ${state.monthName.split(' ')[0]} History`}
+            </button>
+          ))}
+        </div>
+
+        {/* Log tab */}
+        {activeTab==="log" && (
+          <div style={{padding:"14px 18px"}}>
+            <div style={{
+              background:"var(--bg-card)", borderRadius:22, padding:"20px",
+              marginBottom:12, boxShadow:`0 4px 24px var(--shadow)`,
+            }}>
+              {/* SMS paste */}
+              <button onClick={handlePasteSMS} style={{
+                width:"100%", marginBottom:14,
+                background:isDark?"linear-gradient(135deg,#3a2445,#2d1a35)":"linear-gradient(135deg,#f0e4ff,#ffe8f5)",
+                border:`2px dashed ${isDark?"#6050a0":"#d8b8f0"}`,
+                borderRadius:16, padding:"12px",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:14,
+                color:"var(--text-primary)", cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                transition:"all 0.2s ease",
+              }}>
+                <span style={{fontSize:20}}>📋</span>
+                Paste SMS to Auto-Fill
+              </button>
+
+              <div style={{fontSize:10, fontWeight:800, color:"var(--text-secondary)", marginBottom:7, letterSpacing:0.5, textTransform:"uppercase", fontFamily:"'Nunito',sans-serif"}}>
+                Or enter manually
+              </div>
+
+              {/* Amount input */}
+              <div style={{display:"flex", gap:8, alignItems:"stretch", marginBottom:14}}>
+                <div style={{
+                  display:"flex", alignItems:"center", flex:1,
+                  border:`2px solid var(--border-color)`, borderRadius:16,
+                  background:"var(--bg-input)", overflow:"hidden",
+                }}>
+                  <span style={{padding:"0 12px", fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:22, color:"#c8a0e0"}}>₹</span>
+                  <input ref={inputRef} type="number" placeholder="0"
+                    value={amount} onChange={e=>setAmount(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&handleAdd()}
+                    style={{
+                      flex:1, border:"none", outline:"none",
+                      fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:28,
+                      color:"var(--text-primary)", background:"transparent", padding:"14px 8px",
+                    }}
+                  />
+                </div>
+                <button onClick={handleAdd} style={{
+                  background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+                  border:"none", borderRadius:16, padding:"0 22px",
+                  fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+                  color:"white", cursor:"pointer",
+                  boxShadow:"0 4px 16px rgba(255,182,193,0.5)",
+                  whiteSpace:"nowrap", WebkitTapHighlightColor:"transparent",
+                }}>Add ➕</button>
+              </div>
+
+              {/* Note */}
+              <div style={{fontSize:10, fontWeight:800, color:"var(--text-secondary)", marginBottom:6, letterSpacing:0.5, textTransform:"uppercase", fontFamily:"'Nunito',sans-serif"}}>Note (optional)</div>
+              <input type="text" placeholder="e.g. Lunch, Uber, Groceries..."
+                value={note} onChange={e=>setNote(e.target.value)}
+                maxLength={60}
+                style={{
+                  width:"100%", border:`1.5px solid var(--border-color)`,
+                  borderRadius:12, padding:"10px 14px",
+                  fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:13,
+                  color:"var(--text-primary)", background:"var(--bg-input)", outline:"none",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* History tab */}
+        {activeTab==="history" && (
+          <div style={{padding:"14px 18px"}}>
+            <div style={{background:"var(--bg-card)", borderRadius:22, padding:"18px", boxShadow:`0 4px 24px var(--shadow)`}}>
+              <History txns={state.transactions} isDark={isDark}/>
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div style={{padding:"0 18px", display:"flex", gap:8}}>
+          <button onClick={()=>{ setSetupBudgets(state.budgets); setScreen("setup"); }} style={{
+            flex:1, border:`2px solid ${CATS.education.color}`,
+            background:"var(--bg-secondary)", borderRadius:14, padding:"12px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:12,
+            color:"var(--text-primary)", cursor:"pointer",
+          }}>⚙️ Edit Budgets</button>
+          <button onClick={()=>setShowYearlyReport(true)} style={{
+            flex:1, border:`2px solid ${CATS.hobbies.color}`,
+            background:"var(--bg-secondary)", borderRadius:14, padding:"12px",
+            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:12,
+            color:"var(--text-primary)", cursor:"pointer",
+          }}>📊 Yearly Report</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
+
+// Register service worker (relative path works everywhere)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        // Check for updates
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      })
+      .catch(err => console.log('[App] SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
