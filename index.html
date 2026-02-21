@@ -1633,16 +1633,26 @@ function Spendora() {
 
   if (!user) return <SignInScreen/>;
   if (needsTimezone) return <TimezoneSetup onComplete={()=>setNeedsTimezone(false)}/>;
-  if (needsSalarySetup) return (
-    <SalarySetup
-      currentBudgets={state.budgets}
-      onComplete={(salary, budgets) => {
-        setState(s => ({...s, salary, budgets}));
-        setNeedsSalarySetup(false);
-      }}
-    />
-  );
+if (needsSalarySetup) return (
+  <SalarySetup
+    currentBudgets={state.budgets}
+    onComplete={(salary, budgets) => {
+      const newData = {
+        ...state,
+        salary,
+        budgets
+      };
 
+      setState(newData);
+
+      if (user) {
+        saveToFirestore(user.uid, newData).catch(()=>{});
+      }
+
+      setNeedsSalarySetup(false);
+    }}
+  />
+);
   // Yearly report
   if (showYearlyReport && !monthDetail) return (
     <YearlyReport
