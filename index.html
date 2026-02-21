@@ -1404,7 +1404,9 @@ function Spendora() {
                 if (!rolledOver) {
                   setState(data);
                 }
-                if (!data.salary || data.salary === 0) setNeedsSalarySetup(true);
+               if (isFirstLoadRef.current && (!data.salary || data.salary === 0)) {
+  setNeedsSalarySetup(true);
+}
                 if (!ls.get(TIMEZONE_SK, null)) setNeedsTimezone(true);
               } else {
                 // Subsequent updates from other devices — merge carefully
