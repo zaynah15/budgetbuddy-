@@ -879,8 +879,10 @@ function Nudge({visible, message, onClose}) {
 
 function NotificationButton({ enabled, onClick }) {
   return (
-    <button onClick={onClick} style={{
-      position:"fixed", top:80, right:20, zIndex:10001,
+   <button onClick={toggleTheme} style={{
+  position:"fixed", 
+  top:20, 
+  right:20, zIndex:10001,
       width:48, height:48, borderRadius:"50%",
       background: enabled 
         ? "linear-gradient(135deg,#6fd4a8,#40c8a0)"
