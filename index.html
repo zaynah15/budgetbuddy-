@@ -305,52 +305,54 @@ function showSpendingReminder() {
   };
 }
 
-// Check if month has ended and auto-close
-function checkMonthEnd(state, setState, showToast) {
+// Check if month has ended - returns new data or null
+function checkMonthEnd(data, onRollover, showToast) {
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   
-  if (state.monthKey !== currentMonthKey) {
-    // Month has changed! Close previous month
-    const star = calculateStar(state.spent, state.budgets);
-    const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
-    const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
-    const saved = state.salary - totalSpent;
-    
-    const newYearlyLog = {
-      ...state.yearlyLog,
-      [state.monthKey]: {
-        star,
-        spent: {...state.spent},
-        budgets: {...state.budgets},
-        transactions: [...state.transactions],
-        salary: state.salary,
-        totalSpent,
-        totalBudget,
-        saved,
-        monthName: state.monthName,
-      }
-    };
-    
-    // Reset for new month
-    const newSpent = {};
-    Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
-    
-    setState({
-      ...state,
-      monthKey: currentMonthKey,
-      monthName: now.toLocaleString("default", {month:"long", year:"numeric"}),
-      spent: newSpent,
-      transactions: [],
-      salary: 0,
-      yearlyLog: newYearlyLog,
-      currentStar: null,
-    });
-    
+  if (!data.monthKey || data.monthKey === currentMonthKey) return;
+
+  const star = calculateStar(data.spent, data.budgets);
+  const totalSpent = Object.values(data.spent).reduce((a, b) => a + b, 0);
+  const totalBudget = Object.values(data.budgets).reduce((a, b) => a + b, 0);
+  const saved = (data.salary || 0) - totalSpent;
+  
+  const newYearlyLog = {
+    ...data.yearlyLog,
+    [data.monthKey]: {
+      star,
+      spent: {...data.spent},
+      budgets: {...data.budgets},
+      transactions: [...data.transactions],
+      salary: data.salary,
+      totalSpent,
+      totalBudget,
+      saved,
+      monthName: data.monthName,
+    }
+  };
+  
+  const newSpent = {};
+  Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
+  
+  const newData = {
+    ...data,
+    monthKey: currentMonthKey,
+    monthName: now.toLocaleString("default", {month:"long", year:"numeric"}),
+    spent: newSpent,
+    transactions: [],
+    salary: 0,
+    yearlyLog: newYearlyLog,
+    currentStar: null,
+  };
+
+  onRollover(newData);
+  
+  if (showToast) {
     if (star === "pink") {
-      showToast(`🎉 ${state.monthName} complete! You earned a Pink Star ⭐ for staying on budget!`, "success", 5000);
+      showToast(`🎉 ${data.monthName} complete! Pink Star ⭐ earned!`, "success", 5000);
     } else {
-      showToast(`📊 ${state.monthName} complete. Black Star ⭐ - Let's do better this month!`, "info", 5000);
+      showToast(`📊 ${data.monthName} complete. Black Star — let's improve!`, "info", 5000);
     }
   }
 }
@@ -1728,12 +1730,38 @@ function Blobs() {
   );
 }
 
+
+/* Error Boundary — catches render crashes and shows them instead of white screen */
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{minHeight:"100dvh",background:"#fff0f0",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"white",borderRadius:20,padding:32,maxWidth:480,width:"100%",boxShadow:"0 8px 32px rgba(255,0,0,0.1)"}}>
+            <div style={{fontSize:40,marginBottom:12}}>💥</div>
+            <div style={{fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,color:"#cc0000",marginBottom:8}}>Something crashed!</div>
+            <div style={{fontFamily:"monospace",fontSize:12,color:"#666",background:"#f5f5f5",padding:12,borderRadius:8,wordBreak:"break-all"}}>
+              {this.state.error.toString()}
+            </div>
+            <button onClick={()=>window.location.reload()} style={{marginTop:16,background:"#ff6b6b",color:"white",border:"none",borderRadius:12,padding:"12px 24px",fontFamily:"'Nunito',sans-serif",fontWeight:800,cursor:"pointer"}}>
+              Reload App
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ══════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════ */
 function Spendora() {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false); // true once Firestore data is fetched
   const [state, setState] = useState(getInitState);
   const [theme, setTheme] = useState(loadTheme);
   const [syncing, setSyncing] = useState(false);
@@ -1749,100 +1777,103 @@ function Spendora() {
   const [setupBudgets, setSetupBudgets] = useState(state.budgets);
   const [notifSettings, setNotifSettings] = useState(loadNotifSettings);
   const [showQuickLog, setShowQuickLog] = useState(false);
-  const [needsTimezone, setNeedsTimezone] = useState(false);
-  const [needsSalarySetup, setNeedsSalarySetup] = useState(false);
   const [bucketHistory, setBucketHistory] = useState(null);
   const [showYearlyReport, setShowYearlyReport] = useState(false);
   const [monthDetail, setMonthDetail] = useState(null);
   const inputRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const firstLoadRef = useRef(true);
 
   useEffect(() => { saveTheme(theme); }, [theme]);
 
+  const showToast = useCallback((msg, type = "info", dur = 3000) => {
+    setToast({visible:true, message:msg, type});
+    setTimeout(() => setToast(t => ({...t, visible:false})), dur);
+  }, []);
+
+  // ── AUTH + LOAD ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setAuthLoading(false);
-      return;
-    }
+    if (!isFirebaseConfigured) { setDataLoaded(true); return; }
 
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      setAuthLoading(false);
-      if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        });
-        await loadUserData(firebaseUser.uid);
-      } else {
+      if (!firebaseUser) {
         setUser(null);
         setState(getInitState());
+        setDataLoaded(true);
+        firstLoadRef.current = true;
+        return;
       }
+
+      setUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+      });
+
+      if (!firstLoadRef.current) return;
+      firstLoadRef.current = false;
+
+      setSyncing(true);
+      try {
+        const doc = await db.collection('users').doc(firebaseUser.uid).get();
+        let data;
+        if (doc.exists) {
+          const raw = doc.data();
+          // Merge with defaults to handle missing fields from old Firestore docs
+          const init = getInitState();
+          data = {
+            ...init,
+            ...raw,
+            spent: {...init.spent, ...(raw.spent||{})},
+            budgets: {...init.budgets, ...(raw.budgets||{})},
+            yearlyLog: raw.yearlyLog || {},
+            transactions: raw.transactions || [],
+          };
+          checkMonthEnd(data, (newData) => {
+            data = newData;
+            db.collection('users').doc(firebaseUser.uid).set(newData).catch(()=>{});
+          }, showToast);
+        } else {
+          data = getInitState();
+          await db.collection('users').doc(firebaseUser.uid).set(data);
+        }
+        setState(data);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        showToast("Failed to load data", "error");
+      }
+      setSyncing(false);
+      setDataLoaded(true);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // eslint-disable-line
 
-  const loadUserData = async (uid) => {
-    setSyncing(true);
-    try {
-      const doc = await db.collection('users').doc(uid).get();
-      if (doc.exists) {
-        const data = doc.data();
-        setState(data);
-        
-        // Check if month has ended
-        checkMonthEnd(data, setState, showToast);
-        
-        // Check if needs salary setup
-        if (!data.salary || data.salary === 0) {
-          setNeedsSalarySetup(true);
-        }
-      } else {
-        const initial = getInitState();
-        await db.collection('users').doc(uid).set(initial);
-        setState(initial);
-        setNeedsSalarySetup(true);
-      }
-      
-      // Check timezone
-      if (!loadTimezone()) {
-        setNeedsTimezone(true);
-      }
-    } catch (error) {
-      console.error("Error loading data:", error);
-      showToast("Failed to load data", "error");
-    }
-    setSyncing(false);
-  };
-
+  // ── SAVE TO FIRESTORE ─────────────────────────────────────────────
   useEffect(() => {
-    if (user && !syncing && isFirebaseConfigured) {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          await db.collection('users').doc(user.uid).set(state);
-        } catch (error) {
-          console.error("Error saving data:", error);
-        }
-      }, 1000);
-    }
+    if (!user || !isFirebaseConfigured || !dataLoaded) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try { await db.collection('users').doc(user.uid).set(state); } catch(e) {}
+    }, 800);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [state, user, dataLoaded]);
 
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, [state, user, syncing]);
-
-  // Check month end daily
+  // Check month end every minute
   useEffect(() => {
     const interval = setInterval(() => {
-      checkMonthEnd(state, setState, showToast);
-    }, 60000); // Check every minute
-    
+      setState(prev => {
+        let updated = prev;
+        checkMonthEnd(prev, (newData) => {
+          updated = newData;
+          if (user) db.collection('users').doc(user.uid).set(newData).catch(()=>{});
+        }, showToast);
+        return updated;
+      });
+    }, 60000);
     return () => clearInterval(interval);
-  }, [state]);
+  }, [user, showToast]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1870,11 +1901,6 @@ function Spendora() {
   }, []);
 
   useEffect(() => { saveNotifSettings(notifSettings); }, [notifSettings]);
-
-  const showToast = useCallback((msg, type = "info", dur = 3000) => {
-    setToast({visible:true, message:msg, type});
-    setTimeout(() => setToast(t => ({...t, visible:false})), dur);
-  }, []);
 
   const enableNotifications = async () => {
     if (!('Notification' in window)) {
@@ -1923,7 +1949,7 @@ function Spendora() {
   };
 
   const handlePick = (catKey, customAmount = null) => {
-    const amt = customAmount || pendingAmt;
+    const amt = customAmount !== null ? customAmount : pendingAmt;
     setPendingAmt(null);
     
     markSpentToday();
@@ -1999,6 +2025,9 @@ function Spendora() {
     if (!window.confirm("Sign out?")) return;
     try {
       await auth.signOut();
+      firstLoadRef.current = true;
+      setState(getInitState());
+      setDataLoaded(true);
     } catch (error) {
       console.error("Sign out error:", error);
       showToast("Sign out failed", "error");
@@ -2011,28 +2040,15 @@ function Spendora() {
     saveTheme(newTheme);
   };
 
-  const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
-  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
-  const overPct = Math.min((totalSpent / totalBudget) * 100, 100);
   const isDark = theme === 'dark';
-  const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
 
-  if (authLoading) {
+  // ── DERIVED ROUTING — no appScreen state, derived from data ──────
+  if (!dataLoaded) {
     return (
-      <div style={{
-        minHeight:"100dvh",
-        background: `linear-gradient(160deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%)`,
-        display:"flex", alignItems:"center", justifyContent:"center",
-      }}>
+      <div style={{minHeight:"100dvh",background:`linear-gradient(160deg,var(--bg-gradient-start) 0%,var(--bg-gradient-end) 100%)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{textAlign:"center"}}>
-          <img src="logo.png" alt="Spendora" style={{
-            width:80, height:80, marginBottom:16,
-            animation:"pulse 1.5s ease-in-out infinite",
-          }} />
-          <div style={{
-            fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:800,
-            color: "var(--text-secondary)",
-          }}>Loading...</div>
+          <img src="logo.png" alt="" style={{width:80,height:80,marginBottom:16,animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <div style={{fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:800,color:"var(--text-secondary)"}}>Loading...</div>
         </div>
       </div>
     );
@@ -2042,16 +2058,24 @@ function Spendora() {
     return <SignInScreen isDark={isDark} />;
   }
 
-  if (needsTimezone) {
-    return <TimezoneSetup onComplete={() => setNeedsTimezone(false)} isDark={isDark} />;
+  if (!state.timezoneSet) {
+    return <TimezoneSetup
+      onComplete={() => {
+        const ns = {...state, timezoneSet: true};
+        if (user) db.collection('users').doc(user.uid).set(ns).catch(()=>{});
+        setState(ns);
+      }}
+      isDark={isDark}
+    />;
   }
 
-  if (needsSalarySetup) {
-    return <SalarySetup 
+  if (!state.salary || state.salary === 0) {
+    return <SalarySetup
       currentBudgets={state.budgets}
-      onComplete={(salary, budgets) => {
-        setState(s => ({...s, salary, budgets}));
-        setNeedsSalarySetup(false);
+      onComplete={(newSalary, newBudgets) => {
+        const ns = {...state, salary: Number(newSalary), budgets: newBudgets};
+        if (user) db.collection('users').doc(user.uid).set(ns).catch(()=>{});
+        setState(ns);
       }}
       isDark={isDark}
     />;
@@ -2103,6 +2127,11 @@ function Spendora() {
       isDark={isDark}
     />;
   }
+
+  const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
+  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+  const overPct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
+  const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
 
   return (
     <div style={{minHeight:"100dvh", background: "var(--bg-primary)", position:"relative"}}>
@@ -2444,11 +2473,11 @@ function Spendora() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
+ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><Spendora/></ErrorBoundary>);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/budgetbuddy/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 </script>
