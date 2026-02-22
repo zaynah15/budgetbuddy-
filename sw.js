@@ -1,5 +1,5 @@
 // Spendora Service Worker v3 - Production Ready
-const CACHE_NAME = 'spendora-v3';
+const CACHE_NAME = 'spendora-v2-complete';
 const urlsToCache = [
   './',
   './index.html',
