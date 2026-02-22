@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#FFB6C1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,8 +18,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
- <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
-
 
 <!-- React -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -248,7 +246,6 @@ function getInitState() {
     monthKey,
     monthName,
     salary: 0,
-    salaryNeverSet: true,
     yearlyLog: {}, // { "2025-02": { star: "pink", spent: {...}, transactions: [...], salary: 10000 } }
     currentStar: null, // Will be calculated
   };
@@ -308,54 +305,52 @@ function showSpendingReminder() {
   };
 }
 
-// Check if month has ended - returns new data or null
-function checkMonthEnd(data, onRollover, showToast) {
+// Check if month has ended and auto-close
+function checkMonthEnd(state, setState, showToast) {
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   
-  if (!data.monthKey || data.monthKey === currentMonthKey) return;
-
-  const star = calculateStar(data.spent, data.budgets);
-  const totalSpent = Object.values(data.spent).reduce((a, b) => a + b, 0);
-  const totalBudget = Object.values(data.budgets).reduce((a, b) => a + b, 0);
-  const saved = (data.salary || 0) - totalSpent;
-  
-  const newYearlyLog = {
-    ...data.yearlyLog,
-    [data.monthKey]: {
-      star,
-      spent: {...data.spent},
-      budgets: {...data.budgets},
-      transactions: [...data.transactions],
-      salary: data.salary,
-      totalSpent,
-      totalBudget,
-      saved,
-      monthName: data.monthName,
-    }
-  };
-  
-  const newSpent = {};
-  Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
-  
-  const newData = {
-    ...data,
-    monthKey: currentMonthKey,
-    monthName: now.toLocaleString("default", {month:"long", year:"numeric"}),
-    spent: newSpent,
-    transactions: [],
-    salary: 0,
-    yearlyLog: newYearlyLog,
-    currentStar: null,
-  };
-
-  onRollover(newData);
-  
-  if (showToast) {
+  if (state.monthKey !== currentMonthKey) {
+    // Month has changed! Close previous month
+    const star = calculateStar(state.spent, state.budgets);
+    const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
+    const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+    const saved = state.salary - totalSpent;
+    
+    const newYearlyLog = {
+      ...state.yearlyLog,
+      [state.monthKey]: {
+        star,
+        spent: {...state.spent},
+        budgets: {...state.budgets},
+        transactions: [...state.transactions],
+        salary: state.salary,
+        totalSpent,
+        totalBudget,
+        saved,
+        monthName: state.monthName,
+      }
+    };
+    
+    // Reset for new month
+    const newSpent = {};
+    Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
+    
+    setState({
+      ...state,
+      monthKey: currentMonthKey,
+      monthName: now.toLocaleString("default", {month:"long", year:"numeric"}),
+      spent: newSpent,
+      transactions: [],
+      salary: 0,
+      yearlyLog: newYearlyLog,
+      currentStar: null,
+    });
+    
     if (star === "pink") {
-      showToast(`🎉 ${data.monthName} complete! Pink Star ⭐ earned!`, "success", 5000);
+      showToast(`🎉 ${state.monthName} complete! You earned a Pink Star ⭐ for staying on budget!`, "success", 5000);
     } else {
-      showToast(`📊 ${data.monthName} complete. Black Star — let's improve!`, "info", 5000);
+      showToast(`📊 ${state.monthName} complete. Black Star ⭐ - Let's do better this month!`, "info", 5000);
     }
   }
 }
@@ -758,10 +753,10 @@ function Toast({message, type, visible}) {
   
   return (
     <div style={{
-      position:"fixed", top:70, left:"50%", transform:"translateX(-50%)",
+      position:"fixed", top:20, left:"50%", transform:"translateX(-50%)",
       background:bg, color:"white", padding:"12px 24px", borderRadius:999,
       fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:14,
-      boxShadow:"0 8px 28px rgba(0,0,0,0.15)", zIndex:99999,
+      boxShadow:"0 8px 28px rgba(0,0,0,0.15)", zIndex:9998,
       animation:"slideDown 0.35s cubic-bezier(.34,1.56,.64,1)",
       whiteSpace:"nowrap", maxWidth:"88vw",
     }}>{message}</div>
@@ -870,15 +865,17 @@ function Nudge({visible, message, onClose}) {
 function NotificationButton({ enabled, onClick }) {
   return (
     <button onClick={onClick} style={{
-      width:40, height:40, borderRadius:"50%",
+      position:"fixed", top:80, right:20, zIndex:10001,
+      width:48, height:48, borderRadius:"50%",
       background: enabled 
         ? "linear-gradient(135deg,#6fd4a8,#40c8a0)"
-        : "rgba(255,107,107,0.15)",
-      border: enabled ? "none" : "2px solid #ff6b6b",
-      cursor:"pointer", display:"flex", alignItems:"center",
-      justifyContent:"center", fontSize:20,
-      transition:"all 0.3s ease", flexShrink:0,
-    }} title={enabled ? 'Notifications ON' : 'Enable notifications'}>
+        : "linear-gradient(135deg,#ff6b6b,#ff8e53)",
+      border:"none", cursor:"pointer",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      fontSize:24, boxShadow: `0 4px 16px var(--shadow)`,
+      transition:"all 0.3s ease",
+      animation: enabled ? "" : "shake 0.5s ease-in-out infinite",
+    }} title={enabled ? 'Notifications ON' : 'Notifications OFF - Tap to enable'}>
       {enabled ? '🔔' : '🔕'}
     </button>
   );
@@ -1731,77 +1728,12 @@ function Blobs() {
   );
 }
 
-
-
-/* ── Change Salary Modal ── */
-function ChangeSalaryModal({ currentSalary, onSave, onClose, isDark }) {
-  const [salary, setSalary] = React.useState(currentSalary || "");
-  return (
-    <div onClick={onClose} style={{
-      position:"fixed", inset:0,
-      background: isDark ? "rgba(0,0,0,0.7)" : "rgba(70,30,110,0.45)",
-      backdropFilter:"blur(10px)", display:"flex", alignItems:"center",
-      justifyContent:"center", zIndex:10002, animation:"fadeIn 0.2s ease",
-    }}>
-      <div onClick={e=>e.stopPropagation()} style={{
-        background:"var(--bg-card)", borderRadius:28, padding:"28px 24px",
-        width:"90%", maxWidth:360,
-        boxShadow:"0 32px 80px var(--shadow-heavy)",
-        animation:"popIn 0.4s cubic-bezier(.34,1.56,.64,1)",
-      }}>
-        <div style={{textAlign:"center", marginBottom:20}}>
-          <div style={{fontSize:40, marginBottom:8}}>💰</div>
-          <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:18,color:"var(--text-primary)"}}>Update Monthly Income</div>
-          <div style={{fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:"var(--text-secondary)",marginTop:4}}>Current: ₹{currentSalary?.toLocaleString()||0}</div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",border:"2px solid var(--border-color)",borderRadius:16,background:"var(--bg-input)",overflow:"hidden",marginBottom:20}}>
-          <span style={{padding:"0 14px",fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:22,color:"#c8a0e0"}}>₹</span>
-          <input autoFocus type="number" placeholder="Enter income" value={salary}
-            onChange={e=>setSalary(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&salary&&Number(salary)>0&&onSave(Number(salary))}
-            style={{flex:1,border:"none",outline:"none",fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:28,color:"var(--text-primary)",background:"transparent",padding:"14px 8px"}}/>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={onClose} style={{flex:1,border:"2px solid var(--border-color)",background:"var(--bg-secondary)",borderRadius:14,padding:"12px",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:14,color:"var(--text-tertiary)",cursor:"pointer"}}>Cancel</button>
-          <button onClick={()=>salary&&Number(salary)>0&&onSave(Number(salary))} disabled={!salary||Number(salary)<=0}
-            style={{flex:1,background:salary&&Number(salary)>0?"linear-gradient(135deg,#FFB6C1,#c8a0e0)":"#e8ddf0",border:"none",borderRadius:14,padding:"12px",fontFamily:"'Nunito',sans-serif",fontWeight:900,fontSize:14,color:salary&&Number(salary)>0?"white":"#c8b8d8",cursor:salary&&Number(salary)>0?"pointer":"not-allowed"}}>Save ✓</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* Error Boundary — catches render crashes and shows them instead of white screen */
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{minHeight:"100dvh",background:"#fff0f0",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"white",borderRadius:20,padding:32,maxWidth:480,width:"100%",boxShadow:"0 8px 32px rgba(255,0,0,0.1)"}}>
-            <div style={{fontSize:40,marginBottom:12}}>💥</div>
-            <div style={{fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,color:"#cc0000",marginBottom:8}}>Something crashed!</div>
-            <div style={{fontFamily:"monospace",fontSize:12,color:"#666",background:"#f5f5f5",padding:12,borderRadius:8,wordBreak:"break-all"}}>
-              {this.state.error.toString()}
-            </div>
-            <button onClick={()=>window.location.reload()} style={{marginTop:16,background:"#ff6b6b",color:"white",border:"none",borderRadius:12,padding:"12px 24px",fontFamily:"'Nunito',sans-serif",fontWeight:800,cursor:"pointer"}}>
-              Reload App
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 /* ══════════════════════════════════════════
    MAIN APP
 ══════════════════════════════════════════ */
 function Spendora() {
   const [user, setUser] = useState(null);
-  const [dataLoaded, setDataLoaded] = useState(false); // true once Firestore data is fetched
+  const [authLoading, setAuthLoading] = useState(true);
   const [state, setState] = useState(getInitState);
   const [theme, setTheme] = useState(loadTheme);
   const [syncing, setSyncing] = useState(false);
@@ -1817,106 +1749,100 @@ function Spendora() {
   const [setupBudgets, setSetupBudgets] = useState(state.budgets);
   const [notifSettings, setNotifSettings] = useState(loadNotifSettings);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [needsTimezone, setNeedsTimezone] = useState(false);
+  const [needsSalarySetup, setNeedsSalarySetup] = useState(false);
   const [bucketHistory, setBucketHistory] = useState(null);
   const [showYearlyReport, setShowYearlyReport] = useState(false);
   const [monthDetail, setMonthDetail] = useState(null);
-  const [showChangeSalary, setShowChangeSalary] = useState(false);
   const inputRef = useRef(null);
   const saveTimeoutRef = useRef(null);
-  const firstLoadRef = useRef(true);
 
   useEffect(() => { saveTheme(theme); }, [theme]);
 
-  const showToast = useCallback((msg, type = "info", dur = 3000) => {
-    setToast({visible:true, message:msg, type});
-    setTimeout(() => setToast(t => ({...t, visible:false})), dur);
-  }, []);
-
-  // ── AUTH + LOAD ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!isFirebaseConfigured) { setDataLoaded(true); return; }
+    if (!isFirebaseConfigured) {
+      setAuthLoading(false);
+      return;
+    }
 
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (!firebaseUser) {
+      setAuthLoading(false);
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        });
+        await loadUserData(firebaseUser.uid);
+      } else {
         setUser(null);
         setState(getInitState());
-        setDataLoaded(true);
-        firstLoadRef.current = true;
-        return;
       }
-
-      setUser({
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
-      });
-
-      if (!firstLoadRef.current) return;
-      firstLoadRef.current = false;
-
-      setSyncing(true);
-      try {
-        const doc = await db.collection('users').doc(firebaseUser.uid).get();
-        let data;
-        if (doc.exists) {
-          const raw = doc.data();
-          // Merge with defaults to handle missing fields from old Firestore docs
-          const init = getInitState();
-          data = {
-            ...init,
-            ...raw,
-            spent: {...init.spent, ...(raw.spent||{})},
-            budgets: {...init.budgets, ...(raw.budgets||{})},
-            yearlyLog: raw.yearlyLog || {},
-            transactions: raw.transactions || [],
-            // existing users who never had salaryNeverSet field: treat as already set
-            salaryNeverSet: raw.salaryNeverSet === true ? true : false,
-          };
-          checkMonthEnd(data, (newData) => {
-            data = newData;
-            db.collection('users').doc(firebaseUser.uid).set(newData).catch(()=>{});
-          }, showToast);
-        } else {
-          data = getInitState();
-          await db.collection('users').doc(firebaseUser.uid).set(data);
-        }
-        setState(data);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        showToast("Failed to load data", "error");
-      }
-      setSyncing(false);
-      setDataLoaded(true);
     });
 
     return () => unsubscribe();
-  }, []); // eslint-disable-line
+  }, []);
 
-  // ── SAVE TO FIRESTORE ─────────────────────────────────────────────
+  const loadUserData = async (uid) => {
+    setSyncing(true);
+    try {
+      const doc = await db.collection('users').doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        setState(data);
+        
+        // Check if month has ended
+        checkMonthEnd(data, setState, showToast);
+        
+        // Check if needs salary setup
+        if (!data.salary || data.salary === 0) {
+          setNeedsSalarySetup(true);
+        }
+      } else {
+        const initial = getInitState();
+        await db.collection('users').doc(uid).set(initial);
+        setState(initial);
+        setNeedsSalarySetup(true);
+      }
+      
+      // Check timezone
+      if (!loadTimezone()) {
+        setNeedsTimezone(true);
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      showToast("Failed to load data", "error");
+    }
+    setSyncing(false);
+  };
+
   useEffect(() => {
-    if (!user || !isFirebaseConfigured || !dataLoaded) return;
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try { await db.collection('users').doc(user.uid).set(state); } catch(e) {}
-    }, 800);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
-  }, [state, user, dataLoaded]);
+    if (user && !syncing && isFirebaseConfigured) {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await db.collection('users').doc(user.uid).set(state);
+        } catch (error) {
+          console.error("Error saving data:", error);
+        }
+      }, 1000);
+    }
 
-  // Check month end every minute
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [state, user, syncing]);
+
+  // Check month end daily
   useEffect(() => {
     const interval = setInterval(() => {
-      setState(prev => {
-        let updated = prev;
-        checkMonthEnd(prev, (newData) => {
-          updated = newData;
-          if (user) db.collection('users').doc(user.uid).set(newData).catch(()=>{});
-        }, showToast);
-        return updated;
-      });
-    }, 60000);
+      checkMonthEnd(state, setState, showToast);
+    }, 60000); // Check every minute
+    
     return () => clearInterval(interval);
-  }, [user, showToast]);
+  }, [state]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1945,43 +1871,55 @@ function Spendora() {
 
   useEffect(() => { saveNotifSettings(notifSettings); }, [notifSettings]);
 
- const enableNotifications = async () => {
-  if (!('Notification' in window)) {
-    showToast("Notifications not supported 😔", "error");
-    return;
-  }
+  const showToast = useCallback((msg, type = "info", dur = 3000) => {
+    setToast({visible:true, message:msg, type});
+    setTimeout(() => setToast(t => ({...t, visible:false})), dur);
+  }, []);
 
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    showToast("Notifications blocked", "error");
-    return;
-  }
-
-  try {
-    // Register service worker first
-    const reg = await navigator.serviceWorker.register('./sw.js');
-    
-    // Get FCM token — paste YOUR VAPID key below
-    const messaging = firebase.messaging();
-    const token = await messaging.getToken({
-      serviceWorkerRegistration: reg,
-      vapidKey: "BIfRknJTQ3gBgodA-NARvluXex_JsshGEnWZ4EAacsoeKWilq1npq21dFlfMorr_d6_RNGJT9z6tpKV9e9gRpbU",
-    });
-
-    // Save token to Firestore so Cloud Function can reach this device
-    if (token && user) {
-      await db.collection('users').doc(user.uid).update({ fcmToken: token });
+  const enableNotifications = async () => {
+    if (!('Notification' in window)) {
+      showToast("Notifications not supported 😔", "error");
+      return;
     }
 
-    setNotifSettings({ enabled: true, permission: 'granted' });
-    saveNotifSettings({ enabled: true, permission: 'granted' });
-    showToast("🔔 Reminders enabled!", "success");
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setNotifSettings({enabled:false, permission:'denied'});
+      showToast("Notifications blocked — enable in phone settings", "error");
+      return;
+    }
 
-  } catch (err) {
-    console.error("FCM error:", err);
-    showToast("Could not enable notifications", "error");
-  }
-};
+    try {
+      // Register SW then wait for it to be ready
+      await navigator.serviceWorker.register('./sw.js');
+      const reg = await navigator.serviceWorker.ready;
+
+      // Get FCM token
+      const messaging = firebase.messaging();
+      const token = await messaging.getToken({
+        serviceWorkerRegistration: reg,
+        vapidKey: "BIfRknJTQ3gBgodA-NARvluXex_JsshGEnWZ4EAacsoeKWilq1npq21dFlfMorr_d6_RNGJT9z6tpKV9e9gRpbU",
+      });
+
+      // Save token to Firestore
+      if (token && user) {
+        await db.collection('users').doc(user.uid).update({ fcmToken: token });
+      }
+
+      setNotifSettings({ enabled: true, permission: 'granted' });
+      saveNotifSettings({ enabled: true, permission: 'granted' });
+      showToast("🔔 Reminders enabled!", "success");
+
+    } catch (err) {
+      console.error("FCM error:", err);
+      showToast("Could not enable notifications", "error");
+    }
+  };
+
+  const handleQuickLogSubmit = (amt, cat) => {
+    handlePick(cat, amt);
+    setShowQuickLog(false);
+  };
 
   const handleAdd = () => {
     const amt = Number(amount);
@@ -2009,7 +1947,7 @@ function Spendora() {
   };
 
   const handlePick = (catKey, customAmount = null) => {
-    const amt = customAmount !== null ? customAmount : pendingAmt;
+    const amt = customAmount || pendingAmt;
     setPendingAmt(null);
     
     markSpentToday();
@@ -2085,9 +2023,6 @@ function Spendora() {
     if (!window.confirm("Sign out?")) return;
     try {
       await auth.signOut();
-      firstLoadRef.current = true;
-      setState(getInitState());
-      setDataLoaded(true);
     } catch (error) {
       console.error("Sign out error:", error);
       showToast("Sign out failed", "error");
@@ -2100,23 +2035,28 @@ function Spendora() {
     saveTheme(newTheme);
   };
 
-  const handleSalaryChange = (newSalary) => {
-    const ns = {...state, salary: newSalary};
-    setState(ns);
-    if (user) db.collection('users').doc(user.uid).set(ns).catch(()=>{});
-    setShowChangeSalary(false);
-    showToast(`💰 Income updated to ₹${newSalary.toLocaleString()}!`, "success");
-  };
-
+  const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
+  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+  const overPct = Math.min((totalSpent / totalBudget) * 100, 100);
   const isDark = theme === 'dark';
+  const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
 
-  // ── DERIVED ROUTING — no appScreen state, derived from data ──────
-  if (!dataLoaded) {
+  if (authLoading) {
     return (
-      <div style={{minHeight:"100dvh",background:`linear-gradient(160deg,var(--bg-gradient-start) 0%,var(--bg-gradient-end) 100%)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{
+        minHeight:"100dvh",
+        background: `linear-gradient(160deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%)`,
+        display:"flex", alignItems:"center", justifyContent:"center",
+      }}>
         <div style={{textAlign:"center"}}>
-          <img src="logo.png" alt="" style={{width:80,height:80,marginBottom:16,animation:"pulse 1.5s ease-in-out infinite"}}/>
-          <div style={{fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:800,color:"var(--text-secondary)"}}>Loading...</div>
+          <img src="logo.png" alt="Spendora" style={{
+            width:80, height:80, marginBottom:16,
+            animation:"pulse 1.5s ease-in-out infinite",
+          }} />
+          <div style={{
+            fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:800,
+            color: "var(--text-secondary)",
+          }}>Loading...</div>
         </div>
       </div>
     );
@@ -2126,24 +2066,16 @@ function Spendora() {
     return <SignInScreen isDark={isDark} />;
   }
 
-  if (!state.timezoneSet) {
-    return <TimezoneSetup
-      onComplete={() => {
-        const ns = {...state, timezoneSet: true};
-        if (user) db.collection('users').doc(user.uid).set(ns).catch(()=>{});
-        setState(ns);
-      }}
-      isDark={isDark}
-    />;
+  if (needsTimezone) {
+    return <TimezoneSetup onComplete={() => setNeedsTimezone(false)} isDark={isDark} />;
   }
 
-  if (state.salaryNeverSet) {
-    return <SalarySetup
+  if (needsSalarySetup) {
+    return <SalarySetup 
       currentBudgets={state.budgets}
-      onComplete={(newSalary, newBudgets) => {
-        const ns = {...state, salary: Number(newSalary), budgets: newBudgets, salaryNeverSet: false};
-        if (user) db.collection('users').doc(user.uid).set(ns).catch(()=>{});
-        setState(ns);
+      onComplete={(salary, budgets) => {
+        setState(s => ({...s, salary, budgets}));
+        setNeedsSalarySetup(false);
       }}
       isDark={isDark}
     />;
@@ -2196,11 +2128,6 @@ function Spendora() {
     />;
   }
 
-  const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
-  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
-  const overPct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
-  const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
-
   return (
     <div style={{minHeight:"100dvh", background: "var(--bg-primary)", position:"relative"}}>
       <Blobs />
@@ -2226,57 +2153,68 @@ function Spendora() {
         />
       )}
 
-      {showChangeSalary && (
-        <ChangeSalaryModal
-          currentSalary={state.salary}
-          onSave={handleSalaryChange}
-          onClose={() => setShowChangeSalary(false)}
-          isDark={isDark}
-        />
-      )}
+      <button onClick={toggleTheme} style={{
+        position:"fixed", top:20, right:20, zIndex:10001,
+        width:48, height:48, borderRadius:"50%",
+        background: isDark
+          ? "linear-gradient(135deg,#FFB6C1,#ffd700)"
+          : "linear-gradient(135deg,#4a4a6a,#2d2d4a)",
+        border:"none", cursor:"pointer", display:"flex",
+        alignItems:"center", justifyContent:"center", fontSize:24,
+        boxShadow: `0 4px 16px var(--shadow)`, transition:"all 0.3s ease",
+      }} title={isDark ? 'Light Mode' : 'Dark Mode'}>
+        {isDark ? '☀️' : '🌙'}
+      </button>
 
-      {/* ── STICKY TOP NAVBAR ── */}
+      <NotificationButton 
+        enabled={notifSettings.enabled && notifSettings.permission === 'granted'}
+        onClick={enableNotifications}
+      />
+
       <div style={{
-        position:"fixed", top:0, left:0, right:0, zIndex:10001,
-        paddingTop:"env(safe-area-inset-top)",
-        background: isDark ? "rgba(26,10,32,0.92)" : "rgba(255,248,242,0.92)",
-        backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
-        borderBottom: `1px solid var(--border-color)`,
-        padding:"0 16px",
-        minHeight:60,
-        display:"flex", alignItems:"center", justifyContent:"space-between",
-        gap:8,
+        position:"fixed", top:20, left:20, zIndex:10001,
+        display:"flex", alignItems:"center", gap:12,
+        background: "var(--bg-card)", padding:"8px 16px 8px 8px",
+        borderRadius:999, boxShadow: `0 4px 16px var(--shadow)`,
       }}>
-        {/* Left: avatar + name + signout */}
-        <div style={{display:"flex", alignItems:"center", gap:10, minWidth:0}}>
-          <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName||'User')}&background=FFB6C1&color=fff`}
-            alt="" style={{width:34,height:34,borderRadius:"50%",border:"2px solid #FFB6C1",flexShrink:0}}/>
-          <div style={{minWidth:0}}>
-            <div style={{fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-              {user.displayName?.split(' ')[0]||'User'}
-              {syncing && <span style={{fontSize:10,color:"#FFB6C1",marginLeft:6}}>↻</span>}
-            </div>
-            <button onClick={handleSignOut} style={{fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-tertiary)",background:"none",border:"none",cursor:"pointer",padding:0}}>Sign Out</button>
-          </div>
-        </div>
-
-        {/* Right: notification + theme toggle */}
-        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <NotificationButton
-            enabled={notifSettings.enabled && notifSettings.permission === 'granted'}
-            onClick={enableNotifications}
-          />
-          <button onClick={toggleTheme} style={{
-            width:40, height:40, borderRadius:"50%",
-            background: isDark ? "linear-gradient(135deg,#FFB6C1,#ffd700)" : "linear-gradient(135deg,#4a4a6a,#2d2d4a)",
-            border:"none", cursor:"pointer", display:"flex",
-            alignItems:"center", justifyContent:"center", fontSize:20,
-            transition:"all 0.3s ease",
+        <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=FFB6C1&color=fff`}
+          alt="Profile" style={{
+            width:36, height:36, borderRadius:"50%",
+            border:"2px solid #FFB6C1",
+          }}
+        />
+        <div>
+          <div style={{
+            fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:900,
+            color: "var(--text-primary)",
           }}>
-            {isDark ? '☀️' : '🌙'}
-          </button>
+            {user.displayName?.split(' ')[0] || 'User'}
+          </div>
+          <button onClick={handleSignOut} style={{
+            fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:700,
+            color: "var(--text-tertiary)", background:"none", border:"none",
+            cursor:"pointer", padding:0,
+          }}>Sign Out</button>
         </div>
       </div>
+
+      {syncing && (
+        <div style={{
+          position:"fixed", bottom:20, right:20, zIndex:10001,
+          background: "var(--bg-card)", padding:"8px 16px", borderRadius:999,
+          boxShadow: `0 4px 16px var(--shadow)`,
+          fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700,
+          color: "var(--text-secondary)", display:"flex",
+          alignItems:"center", gap:8,
+        }}>
+          <div style={{
+            width:12, height:12, border: `2px solid var(--text-tertiary)`,
+            borderTopColor:"#FFB6C1", borderRadius:"50%",
+            animation:"spin 0.8s linear infinite",
+          }}/>
+          Syncing...
+        </div>
+      )}
 
       {showQuickLog && (
         <QuickLogModal onLog={handleQuickLogSubmit}
@@ -2291,11 +2229,11 @@ function Spendora() {
 
       <div style={{
         maxWidth:480, margin:"0 auto", position:"relative",
-        zIndex:1, paddingBottom:"calc(40px + env(safe-area-inset-bottom))", paddingTop:"calc(68px + env(safe-area-inset-top))",
+        zIndex:1, paddingBottom:32, paddingTop:80,
       }}>
         <div style={{
           background: `linear-gradient(160deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%)`,
-          padding:"16px 18px 18px", borderRadius:"0 0 30px 30px",
+          padding:"26px 18px 18px", borderRadius:"0 0 30px 30px",
           boxShadow: `0 8px 30px var(--shadow)`, position:"relative",
           overflow:"hidden",
         }}>
@@ -2304,8 +2242,14 @@ function Spendora() {
             alignItems:"flex-start",
           }}>
             <div>
+              <div style={{
+                fontSize:10, fontWeight:800, color: "var(--text-tertiary)",
+                letterSpacing:2, textTransform:"uppercase",
+                fontFamily:"'Nunito',sans-serif",
+              }}>Spendora</div>
+
               <h1 style={{
-                margin:"0 0 2px", fontSize:20, fontWeight:900,
+                margin:"4px 0 2px", fontSize:20, fontWeight:900,
                 background:"linear-gradient(135deg,#c06080,#9b6dbd)",
                 WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
                 fontFamily:"'Nunito',sans-serif",
@@ -2314,7 +2258,7 @@ function Spendora() {
               <div style={{
                 fontSize:11, color: "var(--text-secondary)",
                 fontWeight:700, fontFamily:"'Nunito',sans-serif",
-              }}>{state.monthName} · Income: ₹{(state.salary||0).toLocaleString()}</div>
+              }}>{state.monthName}</div>
             </div>
 
             <MonthlyStarBadge monthName={state.monthName} currentStar={currentStar} />
@@ -2499,26 +2443,24 @@ function Spendora() {
           </div>
         )}
 
-        <div style={{padding:"0 18px 8px", display:"flex", gap:8, flexWrap:"wrap"}}>
-          <button onClick={()=>{setSetupBudgets(state.budgets);setScreen("setup");}} style={{
-            flex:1, minWidth:"30%", border:`2px solid ${CATS.education.color}`,
-            background:"var(--bg-secondary)", borderRadius:14, padding:"12px 8px",
-            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:12,
-            color:"var(--text-primary)", cursor:"pointer", textAlign:"center",
+        <div style={{padding:"0 18px", display:"flex", gap:8}}>
+          <button onClick={() => {
+            setSetupBudgets(state.budgets);
+            setScreen("setup");
+          }} style={{
+            flex:1, border: `2px solid ${CATS.education.color}`,
+            background: "var(--bg-secondary)", borderRadius:14,
+            padding:"12px", fontFamily:"'Nunito',sans-serif",
+            fontWeight:800, fontSize:12, color: "var(--text-primary)",
+            cursor:"pointer",
           }}>⚙️ Edit Budgets</button>
 
-          <button onClick={()=>setShowChangeSalary(true)} style={{
-            flex:1, minWidth:"30%", border:`2px solid #FFB6C1`,
-            background:"var(--bg-secondary)", borderRadius:14, padding:"12px 8px",
-            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:12,
-            color:"var(--text-primary)", cursor:"pointer", textAlign:"center",
-          }}>💰 Change Salary</button>
-
-          <button onClick={()=>setShowYearlyReport(true)} style={{
-            flex:1, minWidth:"30%", border:`2px solid ${CATS.hobbies.color}`,
-            background:"var(--bg-secondary)", borderRadius:14, padding:"12px 8px",
-            fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:12,
-            color:"var(--text-primary)", cursor:"pointer", textAlign:"center",
+          <button onClick={() => setShowYearlyReport(true)} style={{
+            flex:1, border: `2px solid ${CATS.hobbies.color}`,
+            background: "var(--bg-secondary)", borderRadius:14,
+            padding:"12px", fontFamily:"'Nunito',sans-serif",
+            fontWeight:800, fontSize:12, color: "var(--text-primary)",
+            cursor:"pointer",
           }}>📊 Yearly Report</button>
         </div>
       </div>
@@ -2526,11 +2468,11 @@ function Spendora() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><Spendora/></ErrorBoundary>);
+ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 </script>
