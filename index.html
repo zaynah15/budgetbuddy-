@@ -1944,26 +1944,43 @@ function Spendora() {
 
   useEffect(() => { saveNotifSettings(notifSettings); }, [notifSettings]);
 
-  const enableNotifications = async () => {
-    if (!('Notification' in window)) {
-      showToast("Notifications not supported 😔", "error");
-      return;
+ const enableNotifications = async () => {
+  if (!('Notification' in window)) {
+    showToast("Notifications not supported 😔", "error");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    showToast("Notifications blocked", "error");
+    return;
+  }
+
+  try {
+    // Register service worker first
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    
+    // Get FCM token — paste YOUR VAPID key below
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({
+      serviceWorkerRegistration: reg,
+      vapidKey: "BIfRknJTQ3gBgodA-NARvluXex_JsshGEnWZ4EAacsoeKWilq1npq21dFlfMorr_d6_RNGJT9z6tpKV9e9gRpbU",
+    });
+
+    // Save token to Firestore so Cloud Function can reach this device
+    if (token && user) {
+      await db.collection('users').doc(user.uid).update({ fcmToken: token });
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      setNotifSettings({enabled:true, permission:'granted'});
-      showToast("🔔 Reminders enabled!", "success");
-    } else {
-      setNotifSettings({enabled:false, permission:'denied'});
-      showToast("Notifications blocked", "error");
-    }
-  };
+    setNotifSettings({ enabled: true, permission: 'granted' });
+    saveNotifSettings({ enabled: true, permission: 'granted' });
+    showToast("🔔 Reminders enabled!", "success");
 
-  const handleQuickLogSubmit = (amt, cat) => {
-    handlePick(cat, amt);
-    setShowQuickLog(false);
-  };
+  } catch (err) {
+    console.error("FCM error:", err);
+    showToast("Could not enable notifications", "error");
+  }
+};
 
   const handleAdd = () => {
     const amt = Number(amount);
