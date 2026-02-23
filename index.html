@@ -2475,6 +2475,46 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
-</script>
+ // ══════════════════════════════════════════
+//   NTFY.SH NOTIFICATIONS
+// ══════════════════════════════════════════
+async function sendNtfyNotification(message) {
+  try {
+    await fetch('https://ntfy.sh/zaynah-spendora-tracker-2026', {
+      method: 'POST',
+      body: message,
+      headers: { 
+        'Title': 'Spendora 💸',
+        'Priority': 'high',
+        'Tags': 'moneybag,chart_with_upwards_trend'
+      }
+    });
+    console.log('✅ Notification sent to ntfy.sh');
+  } catch(e) {
+    console.error('❌ Failed to send notification:', e);
+  }
+}
+
+// Schedule notifications at 12 PM, 4 PM, 9 PM, 11 PM
+setInterval(() => {
+  const now = new Date();
+  const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  
+  if (['12:00', '16:00', '21:00', '23:00'].includes(time)) {
+    const lastSent = localStorage.getItem('ntfy_last_sent');
+    const twoMinsAgo = Date.now() - (2 * 60 * 1000);
+    
+    // Only send if haven't sent in last 2 minutes (prevents duplicates)
+    if (!lastSent || Number(lastSent) < twoMinsAgo) {
+      sendNtfyNotification('Did you spend anything today? Log it in Spendora! 📊');
+      localStorage.setItem('ntfy_last_sent', Date.now());
+    }
+  }
+}, 60000); // Check every minute
+
+console.log('🔔 ntfy.sh notifications active! Topic: zaynah-spendora-tracker-2026');
+
+</script>        
 </body>
 </html>
+
