@@ -159,6 +159,7 @@ const CATS = {
   travel:    { label:"Travel",    emoji:"✈️",  color:"#C1F0DC", dark:"#2aaa78", lightBg:"#f0fcf7", darkBg:"#253d35" },
   education: { label:"Education", emoji:"📚", color:"#E6E6FA", dark:"#6060c0", lightBg:"#f5f5ff", darkBg:"#2d2d45" },
   hobbies:   { label:"Hobbies",   emoji:"🎮", color:"#FFD6BA", dark:"#d4703a", lightBg:"#fff7f0", darkBg:"#3d3025" },
+  investment:{ label:"Investment",emoji:"💎", color:"#FFD700", dark:"#b8860b", lightBg:"#fffef0", darkBg:"#3d3b25", isLocked:true },
 };
 
 const NUDGES = [
@@ -232,7 +233,7 @@ function getInitState() {
   const spent = {}, budgets = {};
   Object.keys(CATS).forEach(k => {
     spent[k] = 0;
-    budgets[k] = DEF_BUDGETS[k];
+    budgets[k] = k === 'investment' ? 0 : (DEF_BUDGETS[k] || 0);
   });
   
   const now = new Date();
@@ -246,14 +247,19 @@ function getInitState() {
     monthKey,
     monthName,
     salary: 0,
+    investment: 0,
     yearlyLog: {}, // { "2025-02": { star: "pink", spent: {...}, transactions: [...], salary: 10000 } }
     currentStar: null, // Will be calculated
   };
 }
 
 function calculateStar(spent, budgets) {
-  const totalSpent = Object.values(spent).reduce((a, b) => a + b, 0);
-  const totalBudget = Object.values(budgets).reduce((a, b) => a + b, 0);
+  const totalSpent = Object.entries(spent)
+    .filter(([k]) => k !== 'investment')
+    .reduce((a, [, b]) => a + b, 0);
+  const totalBudget = Object.entries(budgets)
+    .filter(([k]) => k !== 'investment')
+    .reduce((a, [, b]) => a + b, 0);
   return totalSpent <= totalBudget ? "pink" : "black";
 }
 
@@ -568,19 +574,34 @@ function TimezoneSetup({ onComplete, isDark }) {
 }
 
 // NEW: Salary Setup Screen
+// NEW: Salary Setup Screen (3 STEPS)
 function SalarySetup({ currentBudgets, onComplete, isDark }) {
   const [salary, setSalary] = useState("");
+  const [hasInvestment, setHasInvestment] = useState(null);
+  const [investment, setInvestment] = useState("");
   const [budgets, setBudgets] = useState(currentBudgets);
   const [step, setStep] = useState(1);
   
-  const totalBudget = Object.values(budgets).reduce((a, b) => a + b, 0);
-  const projectedSavings = Number(salary) - totalBudget;
+  const availableMoney = Number(salary) - (hasInvestment ? Number(investment) : 0);
+  const totalBudget = Object.entries(budgets)
+    .filter(([k]) => k !== 'investment')
+    .reduce((sum, [, val]) => sum + val, 0);
+  const projectedSavings = availableMoney - totalBudget;
   
   const handleNext = () => {
     if (step === 1 && salary && Number(salary) > 0) {
       setStep(2);
-    } else if (step === 2) {
-      onComplete(Number(salary), budgets);
+    } else if (step === 2 && hasInvestment !== null) {
+      if (hasInvestment && (!investment || Number(investment) <= 0)) {
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      const finalBudgets = {...budgets};
+      if (hasInvestment) {
+        finalBudgets.investment = Number(investment);
+      }
+      onComplete(Number(salary), finalBudgets, hasInvestment ? Number(investment) : 0);
     }
   };
   
@@ -601,10 +622,10 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
           <p style={{
             fontFamily:"'Nunito',sans-serif", fontSize:14, fontWeight:700,
             color: "var(--text-secondary)",
-          }}>Step {step} of 2</p>
+          }}>Step {step} of 3</p>
         </div>
         
-        {step === 1 ? (
+        {step === 1 && (
           <div style={{
             background: "var(--bg-card)", borderRadius:24, padding:"28px 24px",
             boxShadow: `0 8px 32px var(--shadow)`,
@@ -654,7 +675,96 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
                   : "none",
               }}>Next →</button>
           </div>
-        ) : (
+        )}
+
+        {step === 2 && (
+          <div style={{
+            background: "var(--bg-card)", borderRadius:24, padding:"28px 24px",
+            boxShadow: `0 8px 32px var(--shadow)`,
+          }}>
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:40, textAlign:"center", marginBottom:12}}>💎</div>
+              <h3 style={{
+                fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900,
+                color: "var(--text-primary)", textAlign:"center", marginBottom:20,
+              }}>Do you invest monthly?</h3>
+              
+              <div style={{display:"flex", gap:10, marginBottom:20}}>
+                <button onClick={() => setHasInvestment(true)} style={{
+                  flex:1, padding:"16px",
+                  background: hasInvestment === true ? "#FFD700" : "var(--bg-secondary)",
+                  border: `2px solid ${hasInvestment === true ? "#b8860b" : "var(--border-color)"}`,
+                  borderRadius:16, fontFamily:"'Nunito',sans-serif",
+                  fontSize:16, fontWeight:900,
+                  color: hasInvestment === true ? "white" : "var(--text-primary)",
+                  cursor:"pointer", transition:"all 0.2s",
+                }}>Yes 💎</button>
+                
+                <button onClick={() => {setHasInvestment(false); setInvestment("0");}} style={{
+                  flex:1, padding:"16px",
+                  background: hasInvestment === false ? "#6fd4a8" : "var(--bg-secondary)",
+                  border: `2px solid ${hasInvestment === false ? "#40c8a0" : "var(--border-color)"}`,
+                  borderRadius:16, fontFamily:"'Nunito',sans-serif",
+                  fontSize:16, fontWeight:900,
+                  color: hasInvestment === false ? "white" : "var(--text-primary)",
+                  cursor:"pointer", transition:"all 0.2s",
+                }}>No</button>
+              </div>
+              
+              {hasInvestment === true && (
+                <div style={{
+                  display:"flex", alignItems:"center",
+                  border: `2px solid #FFD700`, borderRadius:16,
+                  background: "var(--bg-input)", overflow:"hidden",
+                  marginTop:16,
+                }}>
+                  <span style={{
+                    padding:"0 16px", fontFamily:"'Nunito',sans-serif",
+                    fontWeight:900, fontSize:26, color:"#b8860b",
+                  }}>₹</span>
+                  <input type="number" placeholder="Monthly investment" value={investment}
+                    onChange={e => setInvestment(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleNext()}
+                    autoFocus
+                    style={{
+                      flex:1, border:"none", outline:"none",
+                      fontFamily:"'Nunito',sans-serif", fontWeight:900,
+                      fontSize:24, color: "var(--text-primary)",
+                      background:"transparent", padding:"16px 12px",
+                    }}
+                  />
+                </div>
+              )}
+              
+              {hasInvestment !== null && (
+                <div style={{
+                  marginTop:16, padding:"12px", background:"#fffef0",
+                  border:"2px solid #FFD700", borderRadius:12,
+                  fontFamily:"'Nunito',sans-serif", fontSize:14,
+                  fontWeight:700, color:"#b8860b",
+                }}>
+                  Available for spending: ₹{availableMoney.toLocaleString()}
+                </div>
+              )}
+            </div>
+            
+            <button onClick={handleNext} 
+              disabled={hasInvestment === null || (hasInvestment && (!investment || Number(investment) <= 0))}
+              style={{
+                width:"100%",
+                background: (hasInvestment !== null && (!hasInvestment || (investment && Number(investment) > 0)))
+                  ? "linear-gradient(135deg,#FFB6C1,#c8a0e0)"
+                  : "#e8ddf0",
+                border:"none", borderRadius:999, padding:"14px",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+                color: "white",
+                cursor: "pointer",
+                boxShadow: "0 6px 20px rgba(255,182,193,0.5)",
+              }}>Next →</button>
+          </div>
+        )}
+        
+        {step === 3 && (
           <div>
             <div style={{
               background: "var(--bg-card)", borderRadius:24, padding:"24px",
@@ -665,7 +775,9 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
                 color: "var(--text-primary)", marginBottom:20, textAlign:"center",
               }}>Set Budget Per Category</h3>
               
-              {Object.entries(CATS).map(([k, cat]) => (
+              {Object.entries(CATS)
+                .filter(([k]) => k !== 'investment')
+                .map(([k, cat]) => (
                 <div key={k} style={{
                   marginBottom:14, padding:"14px", border: `2px solid ${cat.color}`,
                   borderRadius:16, background: isDark ? cat.darkBg : cat.lightBg,
@@ -712,7 +824,7 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
                 fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:800,
                 color:"white", marginBottom:4, opacity:0.9,
               }}>
-                {projectedSavings >= 0 ? "You will save:" : "Budget exceeds income:"}
+                {projectedSavings >= 0 ? "You will save:" : "Budget exceeds available money:"}
               </div>
               <div style={{
                 fontFamily:"'Nunito',sans-serif", fontSize:32, fontWeight:900,
@@ -722,6 +834,8 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
                 fontFamily:"'Nunito',sans-serif", fontSize:12, fontWeight:700,
                 color:"white", marginTop:6, opacity:0.85,
               }}>
+                {hasInvestment ? `(from ₹${availableMoney.toLocaleString()} after ₹${Number(investment).toLocaleString()} investment)` : ""}
+                <br/>
                 {projectedSavings >= 0 
                   ? "if you stick to these budgets 💪"
                   : "reduce your budgets to save money ⚠️"}
@@ -1883,36 +1997,12 @@ function Spendora() {
     }
 
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      setNotifSettings({enabled:false, permission:'denied'});
-      showToast("Notifications blocked — enable in phone settings", "error");
-      return;
-    }
-
-    try {
-      // Register SW then wait for it to be ready
-      await navigator.serviceWorker.register('./sw.js');
-      const reg = await navigator.serviceWorker.ready;
-
-      // Get FCM token
-      const messaging = firebase.messaging();
-      const token = await messaging.getToken({
-        serviceWorkerRegistration: reg,
-        vapidKey: "BIfRknJTQ3gBgodA-NARvluXex_JsshGEnWZ4EAacsoeKWilq1npq21dFlfMorr_d6_RNGJT9z6tpKV9e9gRpbU",
-      });
-
-      // Save token to Firestore
-      if (token && user) {
-        await db.collection('users').doc(user.uid).update({ fcmToken: token });
-      }
-
-      setNotifSettings({ enabled: true, permission: 'granted' });
-      saveNotifSettings({ enabled: true, permission: 'granted' });
+    if (permission === 'granted') {
+      setNotifSettings({enabled:true, permission:'granted'});
       showToast("🔔 Reminders enabled!", "success");
-
-    } catch (err) {
-      console.error("FCM error:", err);
-      showToast("Could not enable notifications", "error");
+    } else {
+      setNotifSettings({enabled:false, permission:'denied'});
+      showToast("Notifications blocked", "error");
     }
   };
 
@@ -2035,8 +2125,8 @@ function Spendora() {
     saveTheme(newTheme);
   };
 
-  const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
-  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+  const totalSpent = Object.entries(state.spent).filter(([k]) => k !== 'investment').reduce((a, [, b]) => a + b, 0);
+  const totalBudget = Object.entries(state.budgets).filter(([k]) => k !== 'investment').reduce((a, [, b]) => a + b, 0);
   const overPct = Math.min((totalSpent / totalBudget) * 100, 100);
   const isDark = theme === 'dark';
   const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
@@ -2073,8 +2163,8 @@ function Spendora() {
   if (needsSalarySetup) {
     return <SalarySetup 
       currentBudgets={state.budgets}
-      onComplete={(salary, budgets) => {
-        setState(s => ({...s, salary, budgets}));
+      onComplete={(salary, budgets, investment = 0) => {
+        setState(s => ({...s, salary, budgets, investment}));
         setNeedsSalarySetup(false);
       }}
       isDark={isDark}
@@ -2302,12 +2392,33 @@ function Spendora() {
           <div style={{
             display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6,
           }}>
-            {Object.entries(CATS).map(([k, cat]) => (
+            {Object.entries(CATS).filter(([k]) => k !== 'investment').map(([k, cat]) => (
               <Ring key={k} spent={state.spent[k]} budget={state.budgets[k]}
                 color={cat.color} dark={cat.dark} emoji={cat.emoji}
                 label={cat.label} onClick={() => setBucketHistory(k)} />
             ))}
           </div>
+          
+          {state.investment > 0 && (
+            <div style={{
+              marginTop:14, padding:"14px", 
+              background:"linear-gradient(135deg,#fffef0,#fff9e0)", 
+              border:"2px solid #FFD700", borderRadius:16, 
+              display:"flex", alignItems:"center", gap:12,
+            }}>
+              <div style={{fontSize:28}}>💎</div>
+              <div style={{flex:1}}>
+                <div style={{
+                  fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:900, 
+                  color:"#b8860b"
+                }}>Investment: ₹{state.investment.toLocaleString()}</div>
+                <div style={{
+                  fontFamily:"'Nunito',sans-serif", fontSize:11, fontWeight:700, 
+                  color:"#d4a500"
+                }}>Locked & Invested ✓</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{padding:"16px 18px 0", display:"flex", gap:8}}>
@@ -2472,49 +2583,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
- // ══════════════════════════════════════════
-//   NTFY.SH NOTIFICATIONS
-// ══════════════════════════════════════════
-async function sendNtfyNotification(message) {
-  try {
-    await fetch('https://ntfy.sh/zaynah-spendora-tracker-2026', {
-      method: 'POST',
-      body: message,
-      headers: { 
-        'Title': 'Spendora 💸',
-        'Priority': 'high',
-        'Tags': 'moneybag,chart_with_upwards_trend'
-      }
-    });
-    console.log('✅ Notification sent to ntfy.sh');
-  } catch(e) {
-    console.error('❌ Failed to send notification:', e);
-  }
-}
-
-// Schedule notifications at 12 PM, 4 PM, 9 PM, 11 PM
-setInterval(() => {
-  const now = new Date();
-  const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-  
-  if (['12:00', '16:00', '21:00', '23:00'].includes(time)) {
-    const lastSent = localStorage.getItem('ntfy_last_sent');
-    const twoMinsAgo = Date.now() - (2 * 60 * 1000);
-    
-    // Only send if haven't sent in last 2 minutes (prevents duplicates)
-    if (!lastSent || Number(lastSent) < twoMinsAgo) {
-      sendNtfyNotification('Did you spend anything today? Log it in Spendora! 📊');
-      localStorage.setItem('ntfy_last_sent', Date.now());
-    }
-  }
-}, 60000); // Check every minute
-
-console.log('🔔 ntfy.sh notifications active! Topic: zaynah-spendora-tracker-2026');
-
-</script>        
+</script>
 </body>
 </html>
-
