@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Spendora">
-<title>Spendora</title>
+<title>Spendora - Your Wallet's Glow-Up</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
@@ -1705,6 +1705,157 @@ function MonthDetailView({ monthKey, data, onClose, isDark }) {
   );
 }
 
+// NEW: Add Custom Bucket Modal
+function AddBucketModal({ onClose, onAdd, isDark }) {
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("");
+  const [budget, setBudget] = useState("");
+  const [selectedColor, setSelectedColor] = useState("#FFB6C1");
+  
+  const colors = [
+    "#FFB6C1", "#B5D8FF", "#C1F0DC", "#E6E6FA", "#FFD6BA",
+    "#FFD700", "#ff9de2", "#a0f0c0", "#ffd89b", "#b19cd9"
+  ];
+  
+  const emojiOptions = [
+    "🏠", "🚗", "💊", "🎬", "🐕", "🌱", "💅", "🎨", "📱", "☕",
+    "🎵", "💼", "🏋️", "🛒", "🎁", "📖", "✈️", "🍕", "💰", "🎯"
+  ];
+  
+  const handleAdd = () => {
+    if (!name || !emoji || !budget || Number(budget) <= 0) {
+      alert("Please fill all fields!");
+      return;
+    }
+    onAdd({
+      name: name.trim(),
+      emoji,
+      budget: Number(budget),
+      color: selectedColor
+    });
+  };
+  
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed", inset:0,
+      background: isDark ? "rgba(0,0,0,0.7)" : "rgba(70,30,110,0.45)",
+      backdropFilter:"blur(10px)", display:"flex", alignItems:"center",
+      justifyContent:"center", zIndex:9999, animation:"fadeIn 0.2s ease",
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "var(--bg-card)", borderRadius:28, padding:"28px 24px",
+        width:"90%", maxWidth:420, maxHeight:"80vh", overflowY:"auto",
+        boxShadow: `0 32px 80px var(--shadow-heavy)`,
+        animation:"popIn 0.4s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        <div style={{marginBottom:20}}>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4}}>
+            <h3 style={{
+              fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900,
+              color: "var(--text-primary)",
+            }}>Add Custom Bucket</h3>
+            <button onClick={onClose} style={{
+              background:"none", border:"none", fontSize:24,
+              color: "var(--text-tertiary)", cursor:"pointer",
+            }}>✕</button>
+          </div>
+        </div>
+        
+        <div style={{marginBottom:16}}>
+          <label style={{
+            display:"block", fontFamily:"'Nunito',sans-serif",
+            fontSize:12, fontWeight:800, color: "var(--text-secondary)",
+            marginBottom:8, textTransform:"uppercase", letterSpacing:0.5,
+          }}>Bucket Name</label>
+          <input type="text" placeholder="e.g., Pet Care, Gym" value={name}
+            onChange={e => setName(e.target.value)}
+            maxLength={15}
+            style={{
+              width:"100%", border: `2px solid var(--border-color)`,
+              borderRadius:14, padding:"12px 16px",
+              fontFamily:"'Nunito',sans-serif", fontSize:15, fontWeight:700,
+              color: "var(--text-primary)", background: "var(--bg-input)",
+              outline:"none",
+            }}
+          />
+        </div>
+        
+        <div style={{marginBottom:16}}>
+          <label style={{
+            display:"block", fontFamily:"'Nunito',sans-serif",
+            fontSize:12, fontWeight:800, color: "var(--text-secondary)",
+            marginBottom:8, textTransform:"uppercase", letterSpacing:0.5,
+          }}>Choose Emoji</label>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8}}>
+            {emojiOptions.map(e => (
+              <button key={e} onClick={() => setEmoji(e)} style={{
+                padding:"12px", fontSize:24, borderRadius:12,
+                background: emoji === e ? selectedColor+"40" : "var(--bg-secondary)",
+                border: `2px solid ${emoji === e ? selectedColor : "var(--border-color)"}`,
+                cursor:"pointer", transition:"all 0.2s",
+              }}>{e}</button>
+            ))}
+          </div>
+        </div>
+        
+        <div style={{marginBottom:16}}>
+          <label style={{
+            display:"block", fontFamily:"'Nunito',sans-serif",
+            fontSize:12, fontWeight:800, color: "var(--text-secondary)",
+            marginBottom:8, textTransform:"uppercase", letterSpacing:0.5,
+          }}>Choose Color</label>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8}}>
+            {colors.map(c => (
+              <button key={c} onClick={() => setSelectedColor(c)} style={{
+                width:40, height:40, borderRadius:"50%",
+                background:c,
+                border: `3px solid ${selectedColor === c ? "var(--text-primary)" : "transparent"}`,
+                cursor:"pointer", transition:"all 0.2s",
+              }}/>
+            ))}
+          </div>
+        </div>
+        
+        <div style={{marginBottom:20}}>
+          <label style={{
+            display:"block", fontFamily:"'Nunito',sans-serif",
+            fontSize:12, fontWeight:800, color: "var(--text-secondary)",
+            marginBottom:8, textTransform:"uppercase", letterSpacing:0.5,
+          }}>Monthly Budget</label>
+          <div style={{
+            display:"flex", alignItems:"center",
+            border: `2px solid var(--border-color)`, borderRadius:16,
+            background: "var(--bg-input)", overflow:"hidden",
+          }}>
+            <span style={{
+              padding:"0 16px", fontFamily:"'Nunito',sans-serif",
+              fontWeight:900, fontSize:22, color:"#c8a0e0",
+            }}>₹</span>
+            <input type="number" placeholder="0" value={budget}
+              onChange={e => setBudget(e.target.value)}
+              style={{
+                flex:1, border:"none", outline:"none",
+                fontFamily:"'Nunito',sans-serif", fontWeight:900,
+                fontSize:24, color: "var(--text-primary)",
+                background:"transparent", padding:"12px 8px",
+              }}
+            />
+          </div>
+        </div>
+        
+        <button onClick={handleAdd} style={{
+          width:"100%",
+          background:"linear-gradient(135deg,#FFB6C1,#c8a0e0)",
+          border:"none", borderRadius:999, padding:"14px",
+          fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:16,
+          color:"white", cursor:"pointer",
+          boxShadow:"0 6px 20px rgba(255,182,193,0.5)",
+        }}>Add Bucket ✓</button>
+      </div>
+    </div>
+  );
+}
+
 function SetupScreen({ budgets, onChange, onSave, isDark }) {
   return (
     <div style={{maxWidth:420, margin:"0 auto", padding:"28px 18px"}}>
@@ -1868,6 +2019,7 @@ function Spendora() {
   const [bucketHistory, setBucketHistory] = useState(null);
   const [showYearlyReport, setShowYearlyReport] = useState(false);
   const [monthDetail, setMonthDetail] = useState(null);
+  const [showAddBucket, setShowAddBucket] = useState(false);
   const inputRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
@@ -2243,6 +2395,36 @@ function Spendora() {
         />
       )}
 
+      {showAddBucket && (
+        <AddBucketModal 
+          onClose={() => setShowAddBucket(false)}
+          onAdd={(bucketData) => {
+            const newKey = bucketData.name.toLowerCase().replace(/\s+/g, '_');
+            
+            // Update CATS dynamically (for this session)
+            CATS[newKey] = {
+              label: bucketData.name,
+              emoji: bucketData.emoji,
+              color: bucketData.color,
+              dark: bucketData.color,
+              lightBg: bucketData.color + "20",
+              darkBg: bucketData.color + "20",
+            };
+            
+            // Update state
+            setState(s => ({
+              ...s,
+              budgets: {...s.budgets, [newKey]: bucketData.budget},
+              spent: {...s.spent, [newKey]: 0}
+            }));
+            
+            showToast(`✨ ${bucketData.emoji} ${bucketData.name} bucket added!`, "success");
+            setShowAddBucket(false);
+          }}
+          isDark={isDark}
+        />
+      )}
+
       <button onClick={toggleTheme} style={{
         position:"fixed", top:20, right:20, zIndex:10001,
         width:48, height:48, borderRadius:"50%",
@@ -2389,6 +2571,38 @@ function Spendora() {
         </div>
 
         <div style={{padding:"20px 18px 0"}}>
+          {state.investment > 0 && (
+            <div style={{
+              display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:6,
+              marginBottom:12,
+            }}>
+              <div onClick={() => setBucketHistory('investment')} style={{
+                display:"flex", flexDirection:"column", alignItems:"center", gap:5,
+                cursor:"pointer",
+              }}>
+                <div style={{position:"relative", width:74, height:74}}>
+                  <svg width={74} height={74} viewBox="0 0 74 74">
+                    <circle cx={37} cy={37} r={32} fill="none" stroke="#FFD700" strokeWidth={6.5}/>
+                  </svg>
+                  <div style={{
+                    position:"absolute", inset:0, display:"flex", alignItems:"center",
+                    justifyContent:"center", fontSize:18,
+                  }}>💎</div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{
+                    fontWeight:800, fontSize:10, color:"#b8860b",
+                    letterSpacing:0.2, fontFamily:"'Nunito',sans-serif",
+                  }}>Investment</div>
+                  <div style={{
+                    fontWeight:700, fontSize:9, fontFamily:"'Nunito',sans-serif",
+                    color:"#d4a500",
+                  }}>₹{state.investment.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div style={{
             display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6,
           }}>
@@ -2398,26 +2612,6 @@ function Spendora() {
                 label={cat.label} onClick={() => setBucketHistory(k)} />
             ))}
           </div>
-          
-          {state.investment > 0 && (
-            <div style={{
-              marginTop:14, padding:"14px", 
-              background:"linear-gradient(135deg,#fffef0,#fff9e0)", 
-              border:"2px solid #FFD700", borderRadius:16, 
-              display:"flex", alignItems:"center", gap:12,
-            }}>
-              <div style={{fontSize:28}}>💎</div>
-              <div style={{flex:1}}>
-                <div style={{
-                  fontFamily:"'Nunito',sans-serif", fontSize:13, fontWeight:900, 
-                  color:"#b8860b"
-                }}>Investment: ₹{state.investment.toLocaleString()}</div>
-                <div style={{
-                  fontFamily:"'Nunito',sans-serif", fontSize:11, fontWeight:700, 
-                  color:"#d4a500"
-                }}>Locked & Invested ✓</div>
-              </div>
-            </div>
           )}
         </div>
 
@@ -2554,25 +2748,45 @@ function Spendora() {
           </div>
         )}
 
-        <div style={{padding:"0 18px", display:"flex", gap:8}}>
-          <button onClick={() => {
-            setSetupBudgets(state.budgets);
-            setScreen("setup");
-          }} style={{
-            flex:1, border: `2px solid ${CATS.education.color}`,
-            background: "var(--bg-secondary)", borderRadius:14,
-            padding:"12px", fontFamily:"'Nunito',sans-serif",
-            fontWeight:800, fontSize:12, color: "var(--text-primary)",
-            cursor:"pointer",
-          }}>⚙️ Edit Budgets</button>
+        <div style={{padding:"0 18px"}}>
+          <div style={{display:"flex", gap:8, marginBottom:8}}>
+            <button onClick={() => {
+              setSetupBudgets(state.budgets);
+              setScreen("setup");
+            }} style={{
+              flex:1, border: `2px solid ${CATS.education.color}`,
+              background: "var(--bg-secondary)", borderRadius:14,
+              padding:"12px", fontFamily:"'Nunito',sans-serif",
+              fontWeight:800, fontSize:12, color: "var(--text-primary)",
+              cursor:"pointer",
+            }}>⚙️ Edit Budgets</button>
 
-          <button onClick={() => setShowYearlyReport(true)} style={{
-            flex:1, border: `2px solid ${CATS.hobbies.color}`,
-            background: "var(--bg-secondary)", borderRadius:14,
-            padding:"12px", fontFamily:"'Nunito',sans-serif",
-            fontWeight:800, fontSize:12, color: "var(--text-primary)",
-            cursor:"pointer",
-          }}>📊 Yearly Report</button>
+            <button onClick={() => setShowYearlyReport(true)} style={{
+              flex:1, border: `2px solid ${CATS.hobbies.color}`,
+              background: "var(--bg-secondary)", borderRadius:14,
+              padding:"12px", fontFamily:"'Nunito',sans-serif",
+              fontWeight:800, fontSize:12, color: "var(--text-primary)",
+              cursor:"pointer",
+            }}>📊 Yearly Report</button>
+          </div>
+
+          <div style={{display:"flex", gap:8}}>
+            <button onClick={() => setNeedsSalarySetup(true)} style={{
+              flex:1, border: `2px solid #FFD700`,
+              background: "var(--bg-secondary)", borderRadius:14,
+              padding:"12px", fontFamily:"'Nunito',sans-serif",
+              fontWeight:800, fontSize:12, color: "var(--text-primary)",
+              cursor:"pointer",
+            }}>💰 Edit Salary</button>
+
+            <button onClick={() => setShowAddBucket(true)} style={{
+              flex:1, border: `2px solid #ff9de2`,
+              background: "var(--bg-secondary)", borderRadius:14,
+              padding:"12px", fontFamily:"'Nunito',sans-serif",
+              fontWeight:800, fontSize:12, color: "var(--text-primary)",
+              cursor:"pointer",
+            }}>➕ Add Bucket</button>
+          </div>
         </div>
       </div>
     </div>
