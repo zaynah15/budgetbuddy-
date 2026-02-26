@@ -321,7 +321,7 @@ function checkMonthEnd(state, setState, showToast) {
     const star = calculateStar(state.spent, state.budgets);
     const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
     const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
-    const saved = state.salary - totalSpent;
+    const saved = state.salary - state.investment - totalSpent;
     
     const newYearlyLog = {
       ...state.yearlyLog,
@@ -581,13 +581,16 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
   const [investment, setInvestment] = useState("");
   const [budgets, setBudgets] = useState(currentBudgets);
   const [step, setStep] = useState(1);
-  
-  const availableMoney = Number(salary) - (hasInvestment ? Number(investment) : 0);
-  const totalBudget = Object.entries(budgets)
-    .filter(([k]) => k !== 'investment')
-    .reduce((sum, [, val]) => sum + val, 0);
-  const projectedSavings = availableMoney - totalBudget;
-  
+
+ const investmentAmount = hasInvestment ? Number(investment) : 0;
+
+const totalBudget = Object.entries(budgets)
+  .filter(([k]) => k !== 'investment')
+  .reduce((sum, [, val]) => sum + Number(val), 0);
+
+const projectedSavings = Number(salary) - investmentAmount - totalBudget;
+
+ 
   const handleNext = () => {
     if (step === 1 && salary && Number(salary) > 0) {
       setStep(2);
