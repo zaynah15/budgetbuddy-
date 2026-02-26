@@ -614,8 +614,12 @@ const projectedSavings = Number(salary) - investmentAmount - totalBudget;
       padding:"20px", overflowY:"auto", position:"relative",
     }}>
       <button onClick={() => {
-        if (window.confirm("Cancel salary setup? Your current settings will be kept.")) {
-          onComplete(state.salary, state.budgets, state.investment);
+        if (window.confirm("Cancel salary setup?")) {
+    onComplete(
+      Number(salary) || 0,
+      budgets,
+      hasInvestment ? Number(investment) : 0
+    );
         }
       }} style={{
         position:"fixed", top:20, right:20, zIndex:10001,
