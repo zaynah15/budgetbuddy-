@@ -612,6 +612,18 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
     }}>
       <div style={{maxWidth:460, margin:"0 auto", paddingTop:40}}>
         <div style={{textAlign:"center", marginBottom:32}}>
+
+         <button onClick={() => {
+  if (window.confirm("Cancel salary setup?")) {
+    setNeedsSalarySetup(false);
+  }
+}} style={{
+  position:"absolute", top:20, right:20,
+  background: "var(--bg-card)", border:"none",
+  borderRadius:"50%", width:40, height:40,
+  fontSize:20, color: "var(--text-primary)",
+  cursor:"pointer", boxShadow: "0 4px 16px rgba(180,140,200,0.12)",
+}}>✕</button>
           <img src="logo.png" alt="Spendora" style={{width:80, height:80, marginBottom:16}} />
           <h2 style={{
             fontFamily:"'Nunito',sans-serif", fontSize:24, fontWeight:900,
