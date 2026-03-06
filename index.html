@@ -312,46 +312,70 @@ function showSpendingReminder() {
 }
 
 // Check if month has ended and auto-close
-function checkMonthEnd(state, setState, showToast) {
+// Check if month has ended and auto-close - FIXED to preserve history
+async function checkMonthEnd(state, setState, showToast, user, db, isFirebaseConfigured) {
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   
   if (state.monthKey !== currentMonthKey) {
+    console.log('🗓️ Month changed! Closing', state.monthKey, '→', currentMonthKey);
+    
     // Month has changed! Close previous month
     const star = calculateStar(state.spent, state.budgets);
-    const totalSpent = Object.values(state.spent).reduce((a, b) => a + b, 0);
-    const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+    const totalSpent = Object.entries(state.spent)
+      .filter(([k]) => k !== 'investment')
+      .reduce((a, [, b]) => a + b, 0);
+    const totalBudget = Object.entries(state.budgets)
+      .filter(([k]) => k !== 'investment')
+      .reduce((a, [, b]) => a + b, 0);
     const saved = state.salary - totalSpent;
     
+    // CRITICAL: Preserve all previous months + add new one
     const newYearlyLog = {
-      ...state.yearlyLog,
+      ...state.yearlyLog, // Keep ALL previous months!
       [state.monthKey]: {
         star,
         spent: {...state.spent},
         budgets: {...state.budgets},
         transactions: [...state.transactions],
         salary: state.salary,
+        investment: state.investment || 0,
         totalSpent,
         totalBudget,
         saved,
         monthName: state.monthName,
+        closedAt: new Date().toISOString(),
       }
     };
+    
+    console.log('📊 Saved months:', Object.keys(newYearlyLog));
     
     // Reset for new month
     const newSpent = {};
     Object.keys(CATS).forEach(k => { newSpent[k] = 0; });
     
-    setState({
+    const newState = {
       ...state,
       monthKey: currentMonthKey,
       monthName: now.toLocaleString("default", {month:"long", year:"numeric"}),
       spent: newSpent,
       transactions: [],
       salary: 0,
-      yearlyLog: newYearlyLog,
+      yearlyLog: newYearlyLog, // PRESERVE HISTORY!
       currentStar: null,
-    });
+    };
+    
+    setState(newState);
+    
+    // CRITICAL: Save to Firebase IMMEDIATELY to preserve history
+    if (user && isFirebaseConfigured) {
+      try {
+        await db.collection('users').doc(user.uid).set(newState);
+        console.log('✅ Month-end data saved to Firebase with history preserved');
+      } catch (err) {
+        console.error('❌ Failed to save month-end data:', err);
+      }
+    }
     
     if (star === "pink") {
       showToast(`🎉 ${state.monthName} complete! You earned a Pink Star ⭐ for staying on budget!`, "success", 5000);
@@ -580,15 +604,30 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
   const [hasInvestment, setHasInvestment] = useState(null);
   const [investment, setInvestment] = useState("");
   
+  console.log('🔍 SalarySetup - currentBudgets received:', currentBudgets);
+  console.log('🔍 SalarySetup - CATS keys:', Object.keys(CATS));
+  
+  // CLEAN UP: Remove any budgets for categories that don't exist in CATS
+  const cleanBudgets = {};
+  Object.keys(CATS).forEach(k => {
+    cleanBudgets[k] = currentBudgets[k] || 0;
+  });
+  
+  console.log('🔍 SalarySetup - cleanBudgets after cleanup:', cleanBudgets);
+  console.log('🔍 SalarySetup - cleanBudgets total:', Object.values(cleanBudgets).reduce((a,b) => a+b, 0));
+  
   // If all budgets are 0, start fresh. Otherwise, keep current values (editing)
-  const isEditing = Object.values(currentBudgets).some(v => v > 0);
-  const [budgets, setBudgets] = useState(currentBudgets);
+  const isEditing = Object.values(cleanBudgets).some(v => v > 0);
+  const [budgets, setBudgets] = useState(cleanBudgets);
   const [step, setStep] = useState(1);
   
   const availableMoney = Number(salary) - (hasInvestment ? Number(investment) : 0);
+  
+  // FIXED: Only count budgets for categories that actually exist in CATS and are displayed!
   const totalBudget = Object.entries(budgets)
-    .filter(([k]) => k !== 'investment')
+    .filter(([k]) => k !== 'investment' && CATS[k]) // Only include if in CATS!
     .reduce((sum, [, val]) => sum + val, 0);
+    
   const projectedSavings = availableMoney - totalBudget;
   
   const handleNext = () => {
@@ -600,7 +639,12 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
       }
       setStep(3);
     } else if (step === 3) {
-      const finalBudgets = {...budgets};
+      // Clean up: Only keep budgets for categories that exist in CATS
+      const finalBudgets = {};
+      Object.keys(CATS).forEach(k => {
+        finalBudgets[k] = budgets[k] || 0;
+      });
+      
       if (hasInvestment) {
         finalBudgets.investment = Number(investment);
       }
@@ -802,6 +846,25 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
                   fontFamily:"'Nunito',sans-serif", fontSize:24, fontWeight:900,
                   color:"#3a85d4",
                 }}>₹{totalBudget.toLocaleString()}</div>
+                <div style={{
+                  fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:600,
+                  color:"#6090b0", marginTop:8,
+                }}>
+                  Counted: {Object.entries(budgets)
+                    .filter(([k]) => k !== 'investment' && CATS[k])
+                    .map(([k, v]) => `${k}:${v}`)
+                    .join(', ') || 'none'}
+                </div>
+                {Object.keys(budgets).filter(k => k !== 'investment' && !CATS[k]).length > 0 && (
+                  <div style={{
+                    fontFamily:"'Nunito',sans-serif", fontSize:10, fontWeight:600,
+                    color:"#ff6b6b", marginTop:4,
+                  }}>
+                    Ignored (ghost buckets): {Object.keys(budgets)
+                      .filter(k => k !== 'investment' && !CATS[k])
+                      .join(', ')}
+                  </div>
+                )}
               </div>
               
               {Object.entries(CATS)
@@ -2088,7 +2151,7 @@ function Spendora() {
         setState(data);
         
         // Check if month has ended
-        checkMonthEnd(data, setState, showToast);
+        await checkMonthEnd(data, setState, showToast, {uid}, db, true);
         
         // Check if needs salary setup
         if (!data.salary || data.salary === 0) {
@@ -2112,6 +2175,9 @@ function Spendora() {
     setSyncing(false);
   };
 
+  // DISABLED: We now save immediately after each action instead of delayed
+  // This prevents data loss and ensures instant updates
+  /*
   useEffect(() => {
     if (user && !syncing && isFirebaseConfigured) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -2129,15 +2195,16 @@ function Spendora() {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [state, user, syncing]);
+  */
 
   // Check month end daily
   useEffect(() => {
-    const interval = setInterval(() => {
-      checkMonthEnd(state, setState, showToast);
+    const interval = setInterval(async () => {
+      await checkMonthEnd(state, setState, showToast, user, db, isFirebaseConfigured);
     }, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  }, [state]);
+  }, [state, user]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2217,7 +2284,7 @@ function Spendora() {
     }
   };
 
-  const handlePick = (catKey, customAmount = null) => {
+  const handlePick = async (catKey, customAmount = null) => {
     const amt = customAmount || pendingAmt;
     setPendingAmt(null);
     
@@ -2248,6 +2315,17 @@ function Spendora() {
     newState.currentStar = calculateStar(newState.spent, newState.budgets);
 
     setState(newState);
+    
+    // CRITICAL: Save to Firebase immediately after transaction
+    if (user && isFirebaseConfigured) {
+      try {
+        await db.collection('users').doc(user.uid).set(newState);
+        console.log('✅ Transaction saved to Firebase');
+      } catch (err) {
+        console.error('❌ Failed to save transaction:', err);
+      }
+    }
+    
     setAmount("");
     setNote("");
 
@@ -2344,9 +2422,23 @@ function Spendora() {
   if (needsSalarySetup) {
     return <SalarySetup 
       currentBudgets={state.budgets}
-      onComplete={(salary, budgets, investment = 0) => {
-        setState(s => ({...s, salary, budgets, investment}));
+      onComplete={async (salary, budgets, investment = 0) => {
+        // Immediate state update with force re-render
+        const newState = {...state, salary, budgets, investment};
+        setState(newState);
+        
+        // Force save to Firebase immediately
+        if (user && isFirebaseConfigured) {
+          try {
+            await db.collection('users').doc(user.uid).set(newState);
+            console.log('✅ Salary setup saved to Firebase');
+          } catch (err) {
+            console.error('❌ Failed to save:', err);
+          }
+        }
+        
         setNeedsSalarySetup(false);
+        showToast("✅ Budget setup saved!", "success");
       }}
       isDark={isDark}
     />;
@@ -2369,8 +2461,20 @@ function Spendora() {
           </div>
           <SetupScreen budgets={setupBudgets}
             onChange={(k, v) => setSetupBudgets(p => ({...p, [k]:v}))}
-            onSave={() => {
-              setState(p => ({...p, budgets:setupBudgets}));
+            onSave={async () => {
+              const newState = {...state, budgets:setupBudgets};
+              setState(newState);
+              
+              // Save to Firebase immediately
+              if (user && isFirebaseConfigured) {
+                try {
+                  await db.collection('users').doc(user.uid).set(newState);
+                  console.log('✅ Budgets saved to Firebase');
+                } catch (err) {
+                  console.error('❌ Failed to save budgets:', err);
+                }
+              }
+              
               setScreen("main");
               showToast("✨ Budgets updated!", "success");
             }}
@@ -2427,7 +2531,7 @@ function Spendora() {
       {showAddBucket && (
         <AddBucketModal 
           onClose={() => setShowAddBucket(false)}
-          onAdd={(bucketData) => {
+          onAdd={async (bucketData) => {
             const newKey = bucketData.name.toLowerCase().replace(/\s+/g, '_');
             
             // Update CATS dynamically (for this session)
@@ -2440,15 +2544,29 @@ function Spendora() {
               darkBg: bucketData.color + "20",
             };
             
-            // Update state
-            setState(s => ({
-              ...s,
-              budgets: {...s.budgets, [newKey]: bucketData.budget},
-              spent: {...s.spent, [newKey]: 0}
-            }));
+            // FORCE immediate state update with new bucket
+            const newState = {
+              ...state,
+              budgets: {...state.budgets, [newKey]: bucketData.budget},
+              spent: {...state.spent, [newKey]: 0}
+            };
+            setState(newState);
+            
+            // Save to Firebase immediately
+            if (user && isFirebaseConfigured) {
+              try {
+                await db.collection('users').doc(user.uid).set(newState);
+                console.log('✅ New bucket saved to Firebase');
+              } catch (err) {
+                console.error('❌ Failed to save bucket:', err);
+              }
+            }
             
             showToast(`✨ ${bucketData.emoji} ${bucketData.name} bucket added!`, "success");
             setShowAddBucket(false);
+            
+            // Force re-render by updating a dummy state
+            setTimeout(() => setState(s => ({...s})), 100);
           }}
           isDark={isDark}
         />
@@ -2793,9 +2911,20 @@ function Spendora() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
 
+// Service worker disabled during development to prevent caching issues
+// Uncomment for production PWA functionality
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/budgetbuddy/sw.js').catch(() => {});
+  });
+}
+*/
+
+// Unregister any existing service workers to clear cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => registration.unregister());
   });
 }
 </script>
