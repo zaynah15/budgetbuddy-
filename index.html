@@ -2912,21 +2912,15 @@ function Spendora() {
 ReactDOM.createRoot(document.getElementById("root")).render(<Spendora/>);
 
 // Service worker disabled during development to prevent caching issues
-// Uncomment for production PWA functionality
-/*
+// Service worker enabled for production
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/budgetbuddy/sw.js').catch(() => {});
   });
 }
-*/
 
 // Unregister any existing service workers to clear cache
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(registration => registration.unregister());
-  });
-}
+
 </script>
 </body>
 </html>
