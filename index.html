@@ -1442,7 +1442,7 @@ function MonthlyStarBadge({ monthName, currentStar }) {
 }
 
 // NEW: Bucket History View
-function BucketHistory({ category, transactions, onClose, isDark }) {
+function BucketHistory({ category, transactions, onClose, onDeleteBucket, isDark }) {
   const cat = CATS[category];
   const filtered = transactions.filter(t => t.category === category);
   
@@ -1461,7 +1461,59 @@ function BucketHistory({ category, transactions, onClose, isDark }) {
         display:"flex", flexDirection:"column",
       }}>
         <div style={{marginBottom:20}}>
-          <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:4}}>
+       <div style={{
+  display:"flex",
+  alignItems:"center",
+  gap:12,
+  marginBottom:4
+}}>
+  <span style={{fontSize:32}}>{cat.emoji}</span>
+
+  <h3 style={{
+    fontFamily:"'Nunito',sans-serif",
+    fontSize:20,
+    fontWeight:900,
+    color: "var(--text-primary)",
+    flex:1,
+  }}>
+    {cat.label} History
+  </h3>
+
+  <button
+    onClick={() => {
+      if (window.confirm(`Delete ${cat.label} bucket? This removes its transactions.`)) {
+        onDeleteBucket(category)
+        onClose()
+      }
+    }}
+    style={{
+      background:"#ff6b6b",
+      border:"none",
+      borderRadius:10,
+      padding:"6px 10px",
+      fontFamily:"'Nunito',sans-serif",
+      fontSize:11,
+      fontWeight:900,
+      color:"white",
+      cursor:"pointer"
+    }}
+  >
+    Delete
+  </button>
+
+  <button
+    onClick={onClose}
+    style={{
+      background:"none",
+      border:"none",
+      fontSize:24,
+      color:"var(--text-tertiary)",
+      cursor:"pointer"
+    }}
+  >
+    ✕
+  </button>
+</div>
             <span style={{fontSize:32}}>{cat.emoji}</span>
             <h3 style={{
               fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900,
@@ -2686,13 +2738,14 @@ function Spendora() {
         onClose={() => setNudge({visible:false, message:""})} />
 
       {bucketHistory && (
-        <BucketHistory 
-          category={bucketHistory}
-          transactions={state.transactions}
-          onClose={() => setBucketHistory(null)}
-          isDark={isDark}
-        />
-      )}
+  <BucketHistory 
+    category={bucketHistory}
+    transactions={state.transactions}
+    onClose={() => setBucketHistory(null)}
+    onDeleteBucket={handleDeleteBucket}
+    isDark={isDark}
+  />
+)}
 
       {showAddBucket && (
         <AddBucketModal 
@@ -3120,15 +3173,7 @@ function Spendora() {
             }}>➕ Add Bucket</button>
           </div>
           
-          <div style={{display:"flex", gap:8, marginTop:8}}>
-            <button onClick={() => setShowDeleteBucket(true)} style={{
-              flex:1, border: `2px solid #ff6b6b`,
-              background: "var(--bg-secondary)", borderRadius:14,
-              padding:"12px", fontFamily:"'Nunito',sans-serif",
-              fontWeight:800, fontSize:12, color: "var(--text-primary)",
-              cursor:"pointer",
-            }}>🗑️ Delete Bucket</button>
-          </div>
+          
         </div>
       </div>
     </div>
