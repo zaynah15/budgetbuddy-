@@ -602,7 +602,7 @@ function TimezoneSetup({ onComplete, isDark }) {
 
 // NEW: Salary Setup Screen
 // NEW: Salary Setup Screen (3 STEPS)
-function SalarySetup({ currentBudgets, onComplete, isDark }) {
+function SalarySetup({ currentBudgets, onComplete, onCancel, isDark }) {
   const [salary, setSalary] = useState("");
   const [hasInvestment, setHasInvestment] = useState(null);
   const [investment, setInvestment] = useState("");
@@ -660,17 +660,26 @@ function SalarySetup({ currentBudgets, onComplete, isDark }) {
       minHeight:"100dvh", background: "var(--bg-primary)",
       padding:"20px", overflowY:"auto", position:"relative",
     }}>
-      <button onClick={() => {
-        if (window.confirm("Cancel salary setup? Your current settings will be kept.")) {
-          onComplete(state.salary, state.budgets, state.investment);
-        }
-      }} style={{
-        position:"fixed", top:20, right:20, zIndex:10001,
-        background: "var(--bg-card)", border:"none",
-        borderRadius:"50%", width:48, height:48,
-        fontSize:24, color: "var(--text-primary)",
-        cursor:"pointer", boxShadow: "0 4px 16px rgba(180,140,200,0.25)",
-      }}>✕</button>
+      {/* Fixed close button - exits cleanly without popup */}
+      <button 
+        onClick={() => {
+          if (onCancel) {
+            onCancel(); // Clean exit to home
+          }
+        }} 
+        style={{
+          position:"fixed", top:20, right:20, zIndex:10001,
+          background: "var(--bg-card)", border:"none",
+          borderRadius:"50%", width:48, height:48,
+          fontSize:24, color: "var(--text-primary)",
+          cursor:"pointer", boxShadow: "0 4px 16px rgba(180,140,200,0.25)",
+          transition:"all 0.2s ease",
+        }}
+        onMouseEnter={e => e.target.style.transform = "scale(1.05)"}
+        onMouseLeave={e => e.target.style.transform = "scale(1)"}
+      >
+        ✕
+      </button>
       
       <div style={{maxWidth:460, margin:"0 auto", paddingTop:40}}>
         <div style={{textAlign:"center", marginBottom:32}}>
@@ -1346,7 +1355,7 @@ function CategorySheet({ amount, spent, budgets, onPick, onCancel, isDark }) {
   );
 }
 
-function Ring({ spent, budget, color, dark, emoji, label, onClick }) {
+function Ring({ spent, budget, color, dark, emoji, label, onClick, onRemove, isCustom }) {
   const pct = Math.min((spent / budget) * 100, 100);
   const r = 32;
   const circ = 2 * Math.PI * r;
@@ -1357,50 +1366,96 @@ function Ring({ spent, budget, color, dark, emoji, label, onClick }) {
   const stroke = isOver ? "#ff6b6b" : isWarn ? "#ffb347" : color;
   
   return (
-    <div onClick={onClick} style={{
+    <div style={{
       display:"flex", flexDirection:"column", alignItems:"center", gap:5,
-      cursor: onClick ? "pointer" : "default",
+      position:"relative",
     }}>
-      <div style={{position:"relative", width:74, height:74}}>
-        {isOver && (
-          <div style={{
-            position:"absolute", inset:-4, borderRadius:"50%",
-            background:"rgba(255,107,107,0.15)",
-            animation:"pulse 1.2s ease-in-out infinite",
-          }}/>
-        )}
-        
-        <svg width={74} height={74} viewBox="0 0 74 74">
-          <circle cx={37} cy={37} r={r} fill="none" stroke="var(--ring-track)" strokeWidth={6.5}/>
-          <circle cx={37} cy={37} r={r} fill="none" stroke={stroke} strokeWidth={6.5}
-            strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash}
-            style={{
-              transformOrigin:"50% 50%", transform:"rotate(-90deg)",
-              transition:"stroke-dashoffset 0.7s cubic-bezier(.4,0,.2,1), stroke 0.4s",
-            }}
-          />
-        </svg>
-        
-        <div style={{
-          position:"absolute", inset:0, display:"flex", alignItems:"center",
-          justifyContent:"center", fontSize: isOver ? 20 : 18,
-          animation: isOver ? "wobble 0.7s ease-in-out infinite alternate" : "none",
-        }}>
-          {isOver ? "😡" : emoji}
-        </div>
-      </div>
+      {/* Remove button for custom buckets */}
+      {isCustom && onRemove && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering ring click
+            onRemove();
+          }}
+          style={{
+            position:"absolute",
+            top:-6,
+            right:-6,
+            width:22,
+            height:22,
+            borderRadius:"50%",
+            background:"#ff6b6b",
+            border:"2px solid var(--bg-primary)",
+            color:"white",
+            fontSize:14,
+            fontWeight:900,
+            display:"flex",
+            alignItems:"center",
+            justifyContent:"center",
+            cursor:"pointer",
+            zIndex:10,
+            boxShadow:"0 2px 8px rgba(255,107,107,0.5)",
+            transition:"all 0.2s ease",
+            padding:0,
+            lineHeight:1,
+          }}
+          onMouseEnter={e => {
+            e.target.style.background = "#ff5252";
+            e.target.style.transform = "scale(1.1)";
+          }}
+          onMouseLeave={e => {
+            e.target.style.background = "#ff6b6b";
+            e.target.style.transform = "scale(1)";
+          }}
+        >
+          ✕
+        </button>
+      )}
       
-      <div style={{textAlign:"center"}}>
-        <div style={{
-          fontWeight:800, fontSize:10, color: "var(--text-secondary)",
-          letterSpacing:0.2, fontFamily:"'Nunito',sans-serif",
-        }}>{label}</div>
+      <div onClick={onClick} style={{
+        cursor: onClick ? "pointer" : "default",
+      }}>
+        <div style={{position:"relative", width:74, height:74}}>
+          {isOver && (
+            <div style={{
+              position:"absolute", inset:-4, borderRadius:"50%",
+              background:"rgba(255,107,107,0.15)",
+              animation:"pulse 1.2s ease-in-out infinite",
+            }}/>
+          )}
+          
+          <svg width={74} height={74} viewBox="0 0 74 74">
+            <circle cx={37} cy={37} r={r} fill="none" stroke="var(--ring-track)" strokeWidth={6.5}/>
+            <circle cx={37} cy={37} r={r} fill="none" stroke={stroke} strokeWidth={6.5}
+              strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash}
+              style={{
+                transformOrigin:"50% 50%", transform:"rotate(-90deg)",
+                transition:"stroke-dashoffset 0.7s cubic-bezier(.4,0,.2,1), stroke 0.4s",
+              }}
+            />
+          </svg>
+          
+          <div style={{
+            position:"absolute", inset:0, display:"flex", alignItems:"center",
+            justifyContent:"center", fontSize: isOver ? 20 : 18,
+            animation: isOver ? "wobble 0.7s ease-in-out infinite alternate" : "none",
+          }}>
+            {isOver ? "😡" : emoji}
+          </div>
+        </div>
         
-        <div style={{
-          fontWeight:700, fontSize:9, fontFamily:"'Nunito',sans-serif",
-          color: isOver ? "#ff6b6b" : "var(--text-tertiary)",
-        }}>
-          {isOver ? `+₹${overspentAmount}` : `₹${Math.max(0, budget - spent)} left`}
+        <div style={{textAlign:"center"}}>
+          <div style={{
+            fontWeight:800, fontSize:10, color: "var(--text-secondary)",
+            letterSpacing:0.2, fontFamily:"'Nunito',sans-serif",
+          }}>{label}</div>
+          
+          <div style={{
+            fontWeight:700, fontSize:9, fontFamily:"'Nunito',sans-serif",
+            color: isOver ? "#ff6b6b" : "var(--text-tertiary)",
+          }}>
+            {isOver ? `+₹${overspentAmount}` : `₹${Math.max(0, budget - spent)} left`}
+          </div>
         </div>
       </div>
     </div>
@@ -2504,6 +2559,7 @@ function Spendora() {
   const totalSpent = Object.entries(state.spent).filter(([k]) => k !== 'investment').reduce((a, [, b]) => a + b, 0);
   const totalBudget = Object.entries(state.budgets).filter(([k]) => k !== 'investment').reduce((a, [, b]) => a + b, 0);
   const overPct = Math.min((totalSpent / totalBudget) * 100, 100);
+  const projectedSavings = (state.salary - state.investment) - totalBudget; // Available money after investment minus total budgets
   const isDark = theme === 'dark';
   const currentStar = state.currentStar || calculateStar(state.spent, state.budgets);
 
@@ -2556,6 +2612,10 @@ function Spendora() {
         
         setNeedsSalarySetup(false);
         showToast("✅ Budget setup saved!", "success");
+      }}
+      onCancel={() => {
+        // Clean exit - just close the setup screen
+        setNeedsSalarySetup(false);
       }}
       isDark={isDark}
     />;
@@ -2837,6 +2897,60 @@ function Spendora() {
                 transition:"width 0.7s cubic-bezier(.4,0,.2,1)",
               }}/>
             </div>
+            
+            {/* Projected Savings Display */}
+            <div style={{
+              marginTop:14,
+              padding:"12px 16px",
+              background: projectedSavings >= 0
+                ? isDark 
+                  ? "linear-gradient(135deg, rgba(111,212,168,0.15), rgba(82,196,143,0.15))"
+                  : "linear-gradient(135deg, rgba(111,212,168,0.12), rgba(82,196,143,0.12))"
+                : isDark
+                  ? "linear-gradient(135deg, rgba(255,107,107,0.15), rgba(255,142,83,0.15))"
+                  : "linear-gradient(135deg, rgba(255,107,107,0.12), rgba(255,142,83,0.12))",
+              border: projectedSavings >= 0
+                ? "2px solid rgba(111,212,168,0.3)"
+                : "2px solid rgba(255,107,107,0.3)",
+              borderRadius:16,
+              textAlign:"center",
+              animation: "fadeIn 0.4s ease",
+            }}>
+              <div style={{
+                fontFamily:"'Nunito',sans-serif",
+                fontSize:12,
+                fontWeight:700,
+                color: "var(--text-secondary)",
+                marginBottom:4,
+                letterSpacing:0.3,
+              }}>
+                {projectedSavings >= 0 ? "💰 Projected Savings" : "⚠️ Budget Deficit"}
+              </div>
+              <div style={{
+                fontFamily:"'Nunito',sans-serif",
+                fontSize:26,
+                fontWeight:900,
+                color: projectedSavings >= 0 ? "#2aaa78" : "#ff6b6b",
+                letterSpacing:-0.5,
+                textShadow: projectedSavings >= 0 
+                  ? "0 2px 8px rgba(42,170,120,0.2)"
+                  : "0 2px 8px rgba(255,107,107,0.2)",
+              }}>
+                {projectedSavings >= 0 ? "+" : ""}₹{Math.abs(projectedSavings).toLocaleString()}
+              </div>
+              <div style={{
+                fontFamily:"'Nunito',sans-serif",
+                fontSize:11,
+                fontWeight:700,
+                color: "var(--text-tertiary)",
+                marginTop:4,
+                lineHeight:1.3,
+              }}>
+                {projectedSavings >= 0 
+                  ? "if you maintain your budget 💪"
+                  : "reduce spending to save money 📉"}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2876,11 +2990,28 @@ function Spendora() {
           <div style={{
             display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6,
           }}>
-            {Object.entries(CATS).filter(([k]) => k !== 'investment').map(([k, cat]) => (
-              <Ring key={k} spent={state.spent[k]} budget={state.budgets[k]}
-                color={cat.color} dark={cat.dark} emoji={cat.emoji}
-                label={cat.label} onClick={() => setBucketHistory(k)} />
-            ))}
+            {Object.entries(CATS).filter(([k]) => k !== 'investment').map(([k, cat]) => {
+              const isCustomBucket = state.customBuckets && state.customBuckets[k];
+              
+              return (
+                <Ring 
+                  key={k} 
+                  spent={state.spent[k]} 
+                  budget={state.budgets[k]}
+                  color={cat.color} 
+                  dark={cat.dark} 
+                  emoji={cat.emoji}
+                  label={cat.label} 
+                  onClick={() => setBucketHistory(k)}
+                  isCustom={isCustomBucket}
+                  onRemove={isCustomBucket ? () => {
+                    if (confirm(`Don't need to track "${cat.label}" anymore?`)) {
+                      handleDeleteBucket(k);
+                    }
+                  } : null}
+                />
+              );
+            })}
           </div>
         </div>
 
